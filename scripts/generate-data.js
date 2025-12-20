@@ -20,8 +20,11 @@ const CONFIG = {
   WALLPAPER_DIR: 'wallpaper',
   THUMBNAIL_DIR: 'thumbnail',
 
-  // 本地图床仓库路径（用于本地模式）
-  LOCAL_REPO_PATH: path.resolve(__dirname, '../../nuanXinProPic'),
+  // 本地图床仓库路径（支持本地开发和 CI 环境）
+  LOCAL_REPO_PATHS: [
+    path.resolve(__dirname, '../nuanXinProPic'), // CI 环境：项目根目录下
+    path.resolve(__dirname, '../../nuanXinProPic'), // 本地开发：同级目录
+  ],
 
   // 支持的图片格式
   IMAGE_EXTENSIONS: ['.jpg', '.jpeg', '.png', '.gif', '.webp'],
@@ -39,34 +42,40 @@ const THUMBNAIL_BASE_URL = `https://raw.githubusercontent.com/${CONFIG.GITHUB_OW
  * 通过本地目录获取壁纸列表（优先使用，避免 API 限流）
  */
 function fetchWallpapersFromLocal() {
-  const localWallpaperDir = path.join(CONFIG.LOCAL_REPO_PATH, CONFIG.WALLPAPER_DIR)
+  // 尝试多个可能的路径
+  for (const repoPath of CONFIG.LOCAL_REPO_PATHS) {
+    const localWallpaperDir = path.join(repoPath, CONFIG.WALLPAPER_DIR)
 
-  if (!fs.existsSync(localWallpaperDir)) {
-    console.log(`Local directory not found: ${localWallpaperDir}`)
-    return null
+    if (!fs.existsSync(localWallpaperDir)) {
+      console.log(`Path not found: ${localWallpaperDir}`)
+      continue
+    }
+
+    console.log('Fetching wallpapers from local directory...')
+    console.log(`Path: ${localWallpaperDir}`)
+
+    const files = fs.readdirSync(localWallpaperDir)
+      .filter((filename) => {
+        const ext = path.extname(filename).toLowerCase()
+        return CONFIG.IMAGE_EXTENSIONS.includes(ext)
+      })
+      .map((filename) => {
+        const filePath = path.join(localWallpaperDir, filename)
+        const stats = fs.statSync(filePath)
+        return {
+          name: filename,
+          size: stats.size,
+          sha: '', // 本地模式无 SHA
+          type: 'file',
+        }
+      })
+
+    console.log(`Found ${files.length} image files`)
+    return files
   }
 
-  console.log('Fetching wallpapers from local directory...')
-  console.log(`Path: ${localWallpaperDir}`)
-
-  const files = fs.readdirSync(localWallpaperDir)
-    .filter((filename) => {
-      const ext = path.extname(filename).toLowerCase()
-      return CONFIG.IMAGE_EXTENSIONS.includes(ext)
-    })
-    .map((filename) => {
-      const filePath = path.join(localWallpaperDir, filename)
-      const stats = fs.statSync(filePath)
-      return {
-        name: filename,
-        size: stats.size,
-        sha: '', // 本地模式无 SHA
-        type: 'file',
-      }
-    })
-
-  console.log(`Found ${files.length} image files`)
-  return files
+  console.log('No local repository found')
+  return null
 }
 
 /**
