@@ -96,33 +96,54 @@ watch(viewMode, async (newMode, oldMode) => {
     return
 
   isAnimating.value = true
-  const cards = gridRef.value.querySelectorAll('.wallpaper-card')
 
-  if (cards.length === 0) {
-    // 没有卡片时直接切换
+  // 安全超时：确保动画状态在 2 秒后一定重置
+  const safetyTimeout = setTimeout(() => {
+    if (isAnimating.value) {
+      isAnimating.value = false
+      displayViewMode.value = newMode
+    }
+  }, 2000)
+
+  try {
+    const cards = gridRef.value.querySelectorAll('.wallpaper-card')
+
+    if (cards.length === 0) {
+      // 没有卡片时直接切换
+      displayViewMode.value = newMode
+      isAnimating.value = false
+      clearTimeout(safetyTimeout)
+      return
+    }
+
+    // 根据切换的视图类型选择不同的动画
+    const animationType = getAnimationType(oldMode, newMode)
+
+    // 阶段1: 卡片消失动画（保持旧布局）
+    await animateOut(cards, animationType)
+
+    // 阶段2: 切换到新布局
     displayViewMode.value = newMode
-    isAnimating.value = false
-    return
+    await nextTick()
+
+    // 短暂延迟让布局完成
+    await new Promise(resolve => setTimeout(resolve, 50))
+
+    // 阶段3: 卡片出现动画（新布局）
+    const newCards = gridRef.value?.querySelectorAll('.wallpaper-card')
+    if (newCards && newCards.length > 0) {
+      await animateIn(newCards, animationType)
+    }
   }
-
-  // 根据切换的视图类型选择不同的动画
-  const animationType = getAnimationType(oldMode, newMode)
-
-  // 阶段1: 卡片消失动画（保持旧布局）
-  await animateOut(cards, animationType)
-
-  // 阶段2: 切换到新布局
-  displayViewMode.value = newMode
-  await nextTick()
-
-  // 短暂延迟让布局完成
-  await new Promise(resolve => setTimeout(resolve, 50))
-
-  // 阶段3: 卡片出现动画（新布局）
-  const newCards = gridRef.value.querySelectorAll('.wallpaper-card')
-  await animateIn(newCards, animationType)
-
-  isAnimating.value = false
+  catch (error) {
+    // 动画出错时确保状态正确
+    console.warn('View mode animation error:', error)
+    displayViewMode.value = newMode
+  }
+  finally {
+    isAnimating.value = false
+    clearTimeout(safetyTimeout)
+  }
 })
 
 // 根据视图切换类型选择动画
@@ -485,10 +506,12 @@ function handleSelect(wallpaper) {
   }
 
   // 瀑布流视图
+  // 注意：瀑布流效果在图片高度不一致时最明显（如手机壁纸）
+  // PC壁纸因高度一致，效果与网格类似
   &.view-masonry {
     display: block;
     column-count: 2;
-    column-gap: var(--grid-gap);
+    column-gap: calc(var(--grid-gap) * 1.2);
 
     @include respond-to('md') {
       column-count: 3;
@@ -504,7 +527,7 @@ function handleSelect(wallpaper) {
 
     > * {
       break-inside: avoid;
-      margin-bottom: var(--grid-gap);
+      margin-bottom: calc(var(--grid-gap) * 1.2);
     }
   }
 }

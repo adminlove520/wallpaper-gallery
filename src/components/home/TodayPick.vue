@@ -80,6 +80,14 @@ onMounted(() => {
       <!-- Skeleton - 图片未加载成功时一直显示，避免空出一大块 -->
       <div v-if="!imageLoaded" class="image-skeleton">
         <div class="skeleton-shimmer" />
+        <div class="skeleton-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <rect x="3" y="3" width="18" height="18" rx="2" />
+            <circle cx="8.5" cy="8.5" r="1.5" />
+            <path d="M21 15l-5-5L5 21" />
+          </svg>
+          <span>加载中...</span>
+        </div>
       </div>
 
       <!-- Image -->
@@ -148,11 +156,17 @@ onMounted(() => {
 .today-pick__content {
   position: relative;
   aspect-ratio: 21 / 9;
+  min-height: 200px;
   border-radius: $radius-lg;
   overflow: hidden;
   cursor: pointer;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
-  background: var(--color-bg-hover);
+  background: var(--color-bg-secondary);
+
+  @include mobile-only {
+    min-height: 150px;
+    aspect-ratio: 16 / 9;
+  }
 
   // &:hover {
   //   .today-pick__overlay {
@@ -182,14 +196,48 @@ onMounted(() => {
 .image-skeleton {
   position: absolute;
   inset: 0;
-  background: var(--color-bg-hover);
+  background: linear-gradient(135deg, var(--color-bg-secondary) 0%, var(--color-bg-hover) 100%);
   overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 
   .skeleton-shimmer {
     position: absolute;
     inset: 0;
-    background: linear-gradient(90deg, transparent 0%, var(--color-bg-card) 50%, transparent 100%);
-    animation: shimmer 1.5s infinite;
+    background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.1) 50%, transparent 100%);
+    animation: shimmer 2s infinite;
+  }
+
+  .skeleton-icon {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: $spacing-sm;
+    color: var(--color-text-muted);
+    opacity: 0.6;
+    z-index: 1;
+
+    svg {
+      width: 48px;
+      height: 48px;
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    span {
+      font-size: $font-size-sm;
+      animation: pulse 2s ease-in-out infinite;
+    }
+  }
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 0.3;
   }
 }
 

@@ -273,7 +273,7 @@ function resetFilters() {
         :style="{ maxHeight: '80%' }"
         class="filter-popup"
         :teleport="null"
-        :close-on-click-overlay="false"
+        :close-on-click-overlay="true"
       >
         <div class="popup-content">
           <!-- 弹窗头部 -->

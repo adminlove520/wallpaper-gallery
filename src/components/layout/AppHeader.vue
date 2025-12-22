@@ -305,7 +305,7 @@ function closeSearch() {
         :style="{ width: '100%' }"
         class="mobile-search-popup"
         :teleport="null"
-        :close-on-click-overlay="false"
+        :close-on-click-overlay="true"
       >
         <div class="search-popup-content">
           <SearchBar
@@ -330,7 +330,7 @@ function closeSearch() {
         :style="{ width: '75%', maxWidth: '300px', height: '100%' }"
         class="mobile-drawer"
         :teleport="null"
-        :close-on-click-overlay="false"
+        :close-on-click-overlay="true"
       >
         <div class="drawer-content">
           <!-- 抽屉头部 -->
