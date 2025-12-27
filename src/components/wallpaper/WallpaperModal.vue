@@ -392,23 +392,24 @@ onUnmounted(() => {
                 {{ displayFilename }}
               </h3>
               <div class="info-tags">
-                <span class="tag" :class="[`tag--${resolution.type || 'success'}`]">{{ resolution.label }}</span>
+                <!-- 移动端显示原图清晰度，PC端显示预览图清晰度 -->
+                <span v-if="isMobile && originalResolution" class="tag" :class="[`tag--${originalResolution.type || 'success'}`]">{{ originalResolution.label }}</span>
+                <span v-else class="tag" :class="[`tag--${resolution.type || 'success'}`]">{{ resolution.label }}</span>
                 <span class="tag tag--secondary">{{ fileExt }}</span>
               </div>
             </div>
 
             <div class="info-details" :class="{ 'info-details--compact': isMobile }">
-              <!-- 移动端紧凑布局 -->
+              <!-- 移动端紧凑布局：直接显示原图信息 -->
               <template v-if="isMobile">
-                <!-- 第一行：预览图分辨率 -->
-                <div v-if="displayDimensions.width > 0" class="detail-row">
+                <!-- 第一行：原图分辨率 -->
+                <div v-if="originalResolution" class="detail-row">
                   <div class="detail-item detail-item--highlight">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                       <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
                       <path d="M8 21h8M12 17v4" />
                     </svg>
-                    <span>{{ displayDimensions.width }} × {{ displayDimensions.height }}</span>
-                    <span v-if="hasPreview && !showOriginal" class="detail-label">预览图</span>
+                    <span>{{ originalResolution.width }} × {{ originalResolution.height }}</span>
                   </div>
                 </div>
                 <!-- 第二行：文件大小 + 日期 -->
@@ -431,7 +432,7 @@ onUnmounted(() => {
                 </div>
               </template>
 
-              <!-- PC端保持原布局 -->
+              <!-- PC端布局：显示预览图分辨率和日期，文件大小在原图卡片显示 -->
               <template v-else>
                 <!-- 预览图分辨率尺寸 -->
                 <div v-if="displayDimensions.width > 0" class="detail-item detail-item--highlight">
@@ -441,13 +442,6 @@ onUnmounted(() => {
                   </svg>
                   <span>{{ displayDimensions.width }} × {{ displayDimensions.height }}</span>
                   <span v-if="hasPreview && !showOriginal" class="detail-label">预览图</span>
-                </div>
-                <!-- 文件大小 -->
-                <div class="detail-item">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" />
-                  </svg>
-                  <span>{{ formattedSize }}</span>
                 </div>
                 <!-- 上传日期 -->
                 <div class="detail-item">
@@ -463,8 +457,8 @@ onUnmounted(() => {
               </template>
             </div>
 
-            <!-- 原图信息卡片（仅在有预览图时显示，突出原图质量吸引下载） -->
-            <div v-if="hasPreview && originalResolution" class="original-info-card">
+            <!-- 原图信息卡片（仅PC端且有预览图时显示，突出原图质量吸引下载） -->
+            <div v-if="!isMobile && hasPreview && originalResolution" class="original-info-card">
               <div class="original-info-header">
                 <span class="original-label">原图</span>
                 <span class="original-resolution-tag" :class="[`tag--${originalResolution.type || 'success'}`]">
