@@ -6,8 +6,17 @@
 # ========================================
 
 [build]
-  # 构建命令
-  command = "pnpm install && pnpm build"
+  # 构建命令（包含自动获取最新 CDN 版本）
+  command = """
+    # 获取图床最新 tag
+    LATEST_TAG=$(curl -s "https://api.github.com/repos/IT-NuanxinPro/nuanXinProPic/tags" | grep -o '"name": "[^"]*"' | head -1 | cut -d'"' -f4)
+    if [ -z "$LATEST_TAG" ]; then LATEST_TAG="v1.0.5"; fi
+    echo "Using CDN version: $LATEST_TAG"
+    # 替换版本号
+    sed -i "s/export const CDN_VERSION = '[^']*'/export const CDN_VERSION = '$LATEST_TAG'/" src/utils/constants.js
+    # 安装依赖并构建
+    pnpm install && pnpm build
+  """
   # 发布目录
   publish = "dist"
   # 忽略构建（仅在有代码变更时构建）
@@ -51,14 +60,24 @@
 
 # Deploy Preview 配置（每个 PR 自动生成预览）
 [context.deploy-preview]
-  command = "pnpm install && pnpm build"
+  command = """
+    LATEST_TAG=$(curl -s "https://api.github.com/repos/IT-NuanxinPro/nuanXinProPic/tags" | grep -o '"name": "[^"]*"' | head -1 | cut -d'"' -f4)
+    if [ -z "$LATEST_TAG" ]; then LATEST_TAG="v1.0.5"; fi
+    sed -i "s/export const CDN_VERSION = '[^']*'/export const CDN_VERSION = '$LATEST_TAG'/" src/utils/constants.js
+    pnpm install && pnpm build
+  """
 
 [context.deploy-preview.environment]
   VITE_ENV = "preview"
 
 # Branch Deploy 配置（dev 分支）
 [context.branch-deploy]
-  command = "pnpm install && pnpm build"
+  command = """
+    LATEST_TAG=$(curl -s "https://api.github.com/repos/IT-NuanxinPro/nuanXinProPic/tags" | grep -o '"name": "[^"]*"' | head -1 | cut -d'"' -f4)
+    if [ -z "$LATEST_TAG" ]; then LATEST_TAG="v1.0.5"; fi
+    sed -i "s/export const CDN_VERSION = '[^']*'/export const CDN_VERSION = '$LATEST_TAG'/" src/utils/constants.js
+    pnpm install && pnpm build
+  """
 
 [context.branch-deploy.environment]
   VITE_ENV = "staging"
