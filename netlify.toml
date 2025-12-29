@@ -20,8 +20,8 @@
     sed -i "s/export const CDN_VERSION = '[^']*'/export const CDN_VERSION = '$LATEST_TAG'/" src/utils/constants.js
     # 安装依赖
     pnpm install
-    # 生成壁纸数据（从图床仓库读取最新数据）
-    node scripts/generate-data.js
+    # 生成壁纸数据（跳过分辨率检测以加快速度）
+    SKIP_IMAGE_DIMENSIONS=true node scripts/generate-data.js
     # 构建（使用 staging 模式加载 .env.staging）
     pnpm build --mode staging
   """
@@ -75,7 +75,7 @@
     git clone --depth 1 --branch $LATEST_TAG https://github.com/IT-NuanxinPro/nuanXinProPic.git nuanXinProPic
     sed -i "s/export const CDN_VERSION = '[^']*'/export const CDN_VERSION = '$LATEST_TAG'/" src/utils/constants.js
     pnpm install
-    node scripts/generate-data.js
+    SKIP_IMAGE_DIMENSIONS=true node scripts/generate-data.js
     pnpm build --mode staging
   """
 
@@ -91,7 +91,7 @@
     git clone --depth 1 --branch $LATEST_TAG https://github.com/IT-NuanxinPro/nuanXinProPic.git nuanXinProPic
     sed -i "s/export const CDN_VERSION = '[^']*'/export const CDN_VERSION = '$LATEST_TAG'/" src/utils/constants.js
     pnpm install
-    node scripts/generate-data.js
+    SKIP_IMAGE_DIMENSIONS=true node scripts/generate-data.js
     pnpm build --mode staging
   """
 
