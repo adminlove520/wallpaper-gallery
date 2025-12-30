@@ -1,12 +1,12 @@
 <script setup>
-import { computed, onMounted, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import DiyAvatarBanner from '@/components/avatar/DiyAvatarBanner.vue'
 import AnnouncementBanner from '@/components/common/AnnouncementBanner.vue'
 import BackToTop from '@/components/common/BackToTop.vue'
 import FilterPanel from '@/components/common/FilterPanel.vue'
 import PopularWallpapers from '@/components/home/PopularWallpapers.vue'
-import TodayPick from '@/components/home/TodayPick.vue'
+// import TodayPick from '@/components/home/TodayPick.vue' // 暂时隐藏，后续可能改为3D轮播
 import PortraitWallpaperModal from '@/components/wallpaper/PortraitWallpaperModal.vue'
 import WallpaperGrid from '@/components/wallpaper/WallpaperGrid.vue'
 import WallpaperModal from '@/components/wallpaper/WallpaperModal.vue'
@@ -16,6 +16,7 @@ import { useModal } from '@/composables/useModal'
 import { useSearch } from '@/composables/useSearch'
 import { useWallpapers } from '@/composables/useWallpapers'
 import { useWallpaperType } from '@/composables/useWallpaperType'
+import { getPopularWallpapers, isSupabaseConfigured } from '@/utils/supabase'
 
 const route = useRoute()
 
@@ -26,7 +27,34 @@ const { currentSeries, initFromRoute } = useWallpaperType()
 const usePortraitModal = computed(() => ['mobile', 'avatar'].includes(currentSeries.value))
 
 // Wallpapers
-const { wallpapers, loading, error, total, fetchWallpapers, getPrevWallpaper, getNextWallpaper } = useWallpapers()
+const { wallpapers, loading: wallpapersLoading, error, total, fetchWallpapers, getPrevWallpaper, getNextWallpaper } = useWallpapers()
+
+// 热门数据（用于排序）
+const popularityData = ref([])
+const popularityLoading = ref(false)
+
+// 整体加载状态：壁纸和热门数据都加载完成才算完成
+const loading = computed(() => wallpapersLoading.value || popularityLoading.value)
+
+// 获取热门数据
+async function fetchPopularityData(series) {
+  if (!isSupabaseConfigured()) {
+    popularityData.value = []
+    return
+  }
+  popularityLoading.value = true
+  try {
+    // 获取前100名热门数据用于排序
+    popularityData.value = await getPopularWallpapers(series, 100)
+  }
+  catch (err) {
+    console.error('获取热门数据失败:', err)
+    popularityData.value = []
+  }
+  finally {
+    popularityLoading.value = false
+  }
+}
 
 // 共享搜索状态
 const { searchQuery, setWallpapers } = useSearch()
@@ -45,11 +73,14 @@ watch(() => route.meta?.series, (newSeries) => {
 
 // 监听系列变化，重新加载数据
 watch(currentSeries, async (newSeries) => {
-  await fetchWallpapers(newSeries)
+  await Promise.all([
+    fetchWallpapers(newSeries),
+    fetchPopularityData(newSeries),
+  ])
 }, { immediate: false })
 
-// Filter
-const { sortBy, formatFilter, categoryFilter, subcategoryFilter, categoryOptions, subcategoryOptions, filteredWallpapers, resultCount, hasActiveFilters, resetFilters } = useFilter(wallpapers, searchQuery)
+// Filter（传入热门数据和当前系列）
+const { sortBy, formatFilter, categoryFilter, subcategoryFilter, categoryOptions, subcategoryOptions, filteredWallpapers, resultCount, hasActiveFilters, resetFilters } = useFilter(wallpapers, searchQuery, popularityData, currentSeries)
 
 // Modal
 const { isOpen, currentData, open, close, updateData } = useModal()
@@ -91,13 +122,16 @@ function handleReload() {
 }
 
 // Initialize
-onMounted(() => {
+onMounted(async () => {
   // 如果路由带有系列参数，初始化系列
   if (route.meta?.series) {
     initFromRoute(route.meta.series)
   }
-  // 加载当前系列的壁纸数据
-  fetchWallpapers(currentSeries.value)
+  // 并行加载壁纸数据和热门数据
+  await Promise.all([
+    fetchWallpapers(currentSeries.value),
+    fetchPopularityData(currentSeries.value),
+  ])
 })
 </script>
 
@@ -107,18 +141,20 @@ onMounted(() => {
       <!-- Announcement Banner -->
       <AnnouncementBanner />
 
-      <!-- Today's Pick - 仅电脑壁纸系列显示 -->
-      <TodayPick
+      <!-- Today's Pick - 暂时隐藏，后续可能改为3D轮播 -->
+      <!-- <TodayPick
         v-if="wallpapers.length > 0 && !loading && currentSeries === 'desktop'"
         :wallpapers="wallpapers"
         @select="handleSelectWallpaper"
-      />
+      /> -->
 
       <!-- 热门壁纸 - 仅电脑壁纸系列显示 -->
       <PopularWallpapers
-        v-if="wallpapers.length > 0 && !loading && currentSeries === 'desktop'"
+        v-if="currentSeries === 'desktop'"
         :series="currentSeries"
         :wallpapers="wallpapers"
+        :popularity-data="popularityData"
+        :loading="loading"
         @select="handleSelectWallpaper"
       />
 
@@ -160,6 +196,7 @@ onMounted(() => {
         :search-query="searchQuery"
         :total-count="total"
         :has-filters="hasActiveFilters"
+        :popularity-data="popularityData"
         @select="handleSelectWallpaper"
         @reset-filters="resetFilters"
       />

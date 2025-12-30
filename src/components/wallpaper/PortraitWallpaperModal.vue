@@ -10,7 +10,7 @@ import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import { useWallpaperType } from '@/composables/useWallpaperType'
 import { trackWallpaperDownload, trackWallpaperPreview } from '@/utils/analytics'
 import { downloadFile, formatDate, formatFileSize, getDisplayFilename, getFileExtension, getResolutionLabel } from '@/utils/format'
-import { recordDownload, recordView } from '@/utils/supabase'
+import { getWallpaperDownloadCount, isSupabaseConfigured, recordDownload, recordView } from '@/utils/supabase'
 
 const props = defineProps({
   wallpaper: {
@@ -39,6 +39,24 @@ const actualDimensions = ref({ width: 0, height: 0 })
 // 保存滚动位置
 const savedScrollY = ref(0)
 
+// 下载次数
+const downloadCount = ref(0)
+
+// 获取下载次数
+async function fetchDownloadCount() {
+  if (!props.wallpaper || !isSupabaseConfigured()) {
+    downloadCount.value = 0
+    return
+  }
+  try {
+    downloadCount.value = await getWallpaperDownloadCount(props.wallpaper.filename, currentSeries.value)
+  }
+  catch (error) {
+    console.error('获取下载次数失败:', error)
+    downloadCount.value = 0
+  }
+}
+
 // GSAP 入场动画
 watch(() => props.isOpen, async (isOpen) => {
   if (isOpen) {
@@ -47,6 +65,8 @@ watch(() => props.isOpen, async (isOpen) => {
       trackWallpaperPreview(props.wallpaper)
       // 记录到 Supabase 统计
       recordView(props.wallpaper, currentSeries.value)
+      // 获取下载次数
+      fetchDownloadCount()
     }
 
     // 保存当前滚动位置
@@ -138,6 +158,11 @@ watch(() => props.wallpaper, () => {
   imageLoaded.value = false
   imageError.value = false
   actualDimensions.value = { width: 0, height: 0 }
+  downloadCount.value = 0
+  // 如果弹窗已打开，重新获取下载次数
+  if (props.isOpen && props.wallpaper) {
+    fetchDownloadCount()
+  }
 })
 
 // 分辨率信息
@@ -318,6 +343,13 @@ onUnmounted(() => {
                 <div class="info-tags">
                   <span class="tag" :class="[`tag--${resolution.type || 'success'}`]">{{ resolution.label }}</span>
                   <span class="tag tag--secondary">{{ fileExt }}</span>
+                  <!-- 下载次数标签（简化版） -->
+                  <span v-if="downloadCount > 0" class="tag tag--download">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" />
+                    </svg>
+                    {{ downloadCount }}
+                  </span>
                 </div>
                 <div class="info-details">
                   <span v-if="originalResolution" class="detail-item">
@@ -575,6 +607,19 @@ onUnmounted(() => {
   &--secondary {
     background: var(--color-bg-hover);
     color: var(--color-text-secondary);
+  }
+
+  &--download {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    background: rgba(16, 185, 129, 0.15);
+    color: var(--color-success);
+
+    svg {
+      width: 10px;
+      height: 10px;
+    }
   }
 }
 

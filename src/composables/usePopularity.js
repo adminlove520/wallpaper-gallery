@@ -103,6 +103,24 @@ export function usePopularity() {
   }
 
   /**
+   * 获取壁纸的下载次数
+   * @param {string} filename - 文件名
+   * @param {string} series - 系列
+   * @returns {number} 下载次数
+   */
+  function getDownloadCount(filename, series) {
+    const cacheKey = `${series}_100`
+    const data = popularityCache.value.get(cacheKey)
+
+    if (!data || data.length === 0) {
+      return 0
+    }
+
+    const item = data.find(item => item.filename === filename)
+    return item?.download_count || 0
+  }
+
+  /**
    * 清除缓存
    */
   function clearCache() {
@@ -116,6 +134,7 @@ export function usePopularity() {
     isPopular,
     getPopularRank,
     getPopularityScore,
+    getDownloadCount,
     clearCache,
   }
 }

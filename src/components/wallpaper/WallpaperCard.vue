@@ -3,7 +3,7 @@ import { gsap } from 'gsap'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useDevice } from '@/composables/useDevice'
 import { IMAGE_PROXY } from '@/utils/constants'
-import { formatFileSize, getDisplayFilename, highlightText } from '@/utils/format'
+import { formatFileSize, formatRelativeTime, getDisplayFilename, highlightText } from '@/utils/format'
 
 const props = defineProps({
   wallpaper: {
@@ -28,6 +28,11 @@ const props = defineProps({
   },
   // 热门排名（0表示不是热门）
   popularRank: {
+    type: Number,
+    default: 0,
+  },
+  // 下载次数
+  downloadCount: {
     type: Number,
     default: 0,
   },
@@ -84,6 +89,9 @@ const fileFormat = computed(() => {
   const ext = props.wallpaper.filename.split('.').pop()?.toUpperCase() || ''
   return ext
 })
+
+// 相对时间（如"3天前"）
+const relativeTime = computed(() => formatRelativeTime(props.wallpaper.createdAt))
 
 // 显示用的文件名（去除分类前缀）
 const displayFilename = computed(() => getDisplayFilename(props.wallpaper.filename))
@@ -276,15 +284,14 @@ function handleMouseLeave(e) {
         </template>
       </p>
       <div class="card-meta">
-        <span class="meta-item">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" />
-          </svg>
-          {{ formattedSize }}
+        <span class="meta-item">{{ formattedSize }}</span>
+        <!-- 下载次数（简化显示） -->
+        <span v-if="downloadCount > 0" class="meta-item meta-downloads">
+          ↓{{ downloadCount }}
         </span>
-        <span class="meta-item meta-format">
-          {{ fileFormat }}
-        </span>
+        <!-- 上传时间 -->
+        <span class="meta-item meta-time">{{ relativeTime }}</span>
+        <span class="meta-item meta-format">{{ fileFormat }}</span>
       </div>
     </div>
   </div>
@@ -298,7 +305,8 @@ function handleMouseLeave(e) {
   overflow: hidden;
   cursor: pointer;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-  will-change: transform, box-shadow;
+  // 使用 backface-visibility 创建新的合成层，避免动画后的布局抖动
+  backface-visibility: hidden;
   // 添加过渡效果，让圆角变化更平滑
   transition: border-radius 0.4s ease;
 
@@ -489,7 +497,8 @@ function handleMouseLeave(e) {
 .card-meta {
   display: flex;
   align-items: center;
-  gap: $spacing-md;
+  flex-wrap: wrap;
+  gap: $spacing-sm;
   font-size: $font-size-xs;
   color: var(--color-text-muted);
 }
@@ -497,12 +506,8 @@ function handleMouseLeave(e) {
 .meta-item {
   display: flex;
   align-items: center;
-  gap: 4px;
-
-  svg {
-    width: 12px;
-    height: 12px;
-  }
+  gap: 2px;
+  white-space: nowrap;
 }
 
 .meta-format {
@@ -511,6 +516,18 @@ function handleMouseLeave(e) {
   border-radius: $radius-sm;
   font-weight: $font-weight-medium;
   font-size: 10px;
+}
+
+.meta-downloads {
+  color: var(--color-success);
+
+  svg {
+    color: var(--color-success);
+  }
+}
+
+.meta-time {
+  color: var(--color-text-muted);
 }
 
 // 列表视图模式

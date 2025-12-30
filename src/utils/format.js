@@ -166,21 +166,26 @@ export function highlightText(text, keyword) {
 }
 
 /**
- * 获取显示用的文件名（去除分类前缀）
+ * 获取显示用的文件名（去除分类前缀和文件后缀）
  * @param {string} filename - 原始文件名，格式：分类--名称.扩展名
- * @returns {string} 显示名称，格式：名称.扩展名
+ * @returns {string} 显示名称，格式：名称（不含后缀）
  * @example
- * getDisplayFilename('动漫--刀剑神域_亚丝娜.jpg') // '刀剑神域_亚丝娜.jpg'
- * getDisplayFilename('风景_山水.png') // '风景_山水.png' (无前缀时原样返回)
+ * getDisplayFilename('动漫--刀剑神域_亚丝娜.jpg') // '刀剑神域_亚丝娜'
+ * getDisplayFilename('风景_山水.png') // '风景_山水'
  */
 export function getDisplayFilename(filename) {
   if (!filename)
     return ''
   const separator = '--'
   const index = filename.indexOf(separator)
-  if (index === -1)
-    return filename
-  return filename.slice(index + separator.length)
+  // 去除分类前缀
+  let name = index === -1 ? filename : filename.slice(index + separator.length)
+  // 去除文件后缀
+  const lastDotIndex = name.lastIndexOf('.')
+  if (lastDotIndex > 0) {
+    name = name.slice(0, lastDotIndex)
+  }
+  return name
 }
 
 /**
