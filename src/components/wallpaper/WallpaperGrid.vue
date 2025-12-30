@@ -7,6 +7,7 @@ import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 // import Pagination from '@/components/common/Pagination.vue' // 注释：改用滚动加载模式
 import { useDevice } from '@/composables/useDevice'
 // import { usePagination } from '@/composables/usePagination' // 注释：改用滚动加载模式
+import { usePopularity } from '@/composables/usePopularity'
 import { useViewMode } from '@/composables/useViewMode'
 import { useWallpaperType } from '@/composables/useWallpaperType'
 import WallpaperCard from './WallpaperCard.vue'
@@ -45,6 +46,7 @@ const router = useRouter()
 const { currentSeries, currentSeriesConfig, availableSeriesOptions } = useWallpaperType()
 const { viewMode, setViewMode } = useViewMode()
 const { isMobile } = useDevice()
+const { fetchPopularData, getPopularRank } = usePopularity()
 const gridRef = ref(null)
 const wrapperRef = ref(null)
 const isAnimating = ref(false)
@@ -476,6 +478,9 @@ onMounted(() => {
   // 添加滚动监听（移动端）
   window.addEventListener('scroll', handleScroll)
 
+  // 获取热门数据
+  fetchPopularData(currentSeries.value)
+
   // 初始化移动端瀑布流分列
   if (useMobileMasonry.value && props.wallpapers.length > 0) {
     initMasonryColumns()
@@ -693,6 +698,7 @@ const skeletonCount = computed(() => isMobile.value ? 6 : 12)
             :search-query="searchQuery"
             view-mode="masonry"
             :aspect-ratio="currentSeriesConfig?.aspectRatio || '16/10'"
+            :popular-rank="getPopularRank(wallpaper.filename, currentSeries)"
             @click="handleSelect"
             @image-load="handleImageLoad('left', index)"
           />
@@ -706,6 +712,7 @@ const skeletonCount = computed(() => isMobile.value ? 6 : 12)
             :search-query="searchQuery"
             view-mode="masonry"
             :aspect-ratio="currentSeriesConfig?.aspectRatio || '16/10'"
+            :popular-rank="getPopularRank(wallpaper.filename, currentSeries)"
             @click="handleSelect"
             @image-load="handleImageLoad('right', index)"
           />
@@ -730,6 +737,7 @@ const skeletonCount = computed(() => isMobile.value ? 6 : 12)
           :search-query="searchQuery"
           :view-mode="effectiveViewMode"
           :aspect-ratio="currentSeriesConfig?.aspectRatio || '16/10'"
+          :popular-rank="getPopularRank(wallpaper.filename, currentSeries)"
           @click="handleSelect"
         />
       </div>

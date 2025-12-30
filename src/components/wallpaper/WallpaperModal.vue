@@ -7,7 +7,7 @@ import { useDevice } from '@/composables/useDevice'
 import { useWallpaperType } from '@/composables/useWallpaperType'
 import { trackWallpaperDownload, trackWallpaperPreview } from '@/utils/analytics'
 import { downloadFile, formatDate, formatFileSize, formatRelativeTime, getDisplayFilename, getFileExtension, getResolutionLabel } from '@/utils/format'
-import { recordDownload, recordView } from '@/utils/supabase'
+import { getWallpaperDownloadCount, isSupabaseConfigured, recordDownload, recordView } from '@/utils/supabase'
 
 const props = defineProps({
   wallpaper: {
@@ -61,6 +61,10 @@ const originalLoaded = ref(false)
 const showOriginal = ref(false)
 const loadingOriginal = ref(false)
 
+// 下载次数
+const downloadCount = ref(0)
+const loadingDownloadCount = ref(false)
+
 // 是否有预览图（仅 desktop 系列）
 const hasPreview = computed(() => !!props.wallpaper?.previewUrl)
 
@@ -91,6 +95,8 @@ watch(() => props.isOpen, async (isOpen) => {
       trackWallpaperPreview(props.wallpaper)
       // 记录到 Supabase 统计
       recordView(props.wallpaper, currentSeries.value)
+      // 获取下载次数
+      fetchDownloadCount()
     }
 
     // 保存当前滚动位置
@@ -187,7 +193,33 @@ watch(() => props.wallpaper, () => {
   originalLoaded.value = false
   showOriginal.value = false
   loadingOriginal.value = false
+  // 重置下载次数
+  downloadCount.value = 0
+  // 如果弹窗已打开，重新获取下载次数
+  if (props.isOpen && props.wallpaper) {
+    fetchDownloadCount()
+  }
 })
+
+// 获取下载次数
+async function fetchDownloadCount() {
+  if (!props.wallpaper || !isSupabaseConfigured()) {
+    downloadCount.value = 0
+    return
+  }
+
+  loadingDownloadCount.value = true
+  try {
+    downloadCount.value = await getWallpaperDownloadCount(props.wallpaper.filename, currentSeries.value)
+  }
+  catch (error) {
+    console.error('获取下载次数失败:', error)
+    downloadCount.value = 0
+  }
+  finally {
+    loadingDownloadCount.value = false
+  }
+}
 
 // 分辨率信息 - 显示当前加载图片的分辨率（预览图或原图）
 const resolution = computed(() => {
@@ -505,6 +537,14 @@ onUnmounted(() => {
               <p class="original-hint">
                 下载获取完整高清原图
               </p>
+            </div>
+
+            <!-- 下载次数显示 -->
+            <div v-if="downloadCount > 0" class="download-count-badge">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" />
+              </svg>
+              <span>已有 <strong>{{ downloadCount }}</strong> 次下载</span>
             </div>
 
             <!-- 操作按钮组 -->
@@ -1048,6 +1088,30 @@ onUnmounted(() => {
   margin: 0;
   position: relative;
   z-index: 1;
+}
+
+// 下载次数显示
+.download-count-badge {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: $spacing-sm $spacing-md;
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  border-radius: var(--radius-md);
+  font-size: $font-size-sm;
+  color: var(--color-text-secondary);
+
+  svg {
+    width: 16px;
+    height: 16px;
+    color: var(--color-success);
+  }
+
+  strong {
+    color: var(--color-success);
+    font-weight: $font-weight-semibold;
+  }
 }
 
 // 操作按钮组

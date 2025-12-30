@@ -138,3 +138,46 @@ export async function getPopularWallpapers(series = 'desktop', limit = 20) {
     return []
   }
 }
+
+/**
+ * 获取单个壁纸的下载次数
+ * @param {string} filename - 文件名
+ * @param {string} series - 系列
+ * @returns {Promise<number>} 下载次数
+ */
+export async function getWallpaperDownloadCount(filename, series) {
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+    return 0
+  }
+
+  try {
+    const response = await fetch(
+      `${SUPABASE_URL}/rest/v1/download_stats?filename=eq.${encodeURIComponent(filename)}&series=eq.${series}&select=download_count`,
+      {
+        headers: {
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+        },
+      },
+    )
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`)
+    }
+
+    const data = await response.json()
+    return data.length > 0 ? data[0].download_count : 0
+  }
+  catch (error) {
+    console.error('获取下载次数失败:', error)
+    return 0
+  }
+}
+
+/**
+ * 检查 Supabase 是否已配置
+ * @returns {boolean}
+ */
+export function isSupabaseConfigured() {
+  return !!(SUPABASE_URL && SUPABASE_ANON_KEY)
+}

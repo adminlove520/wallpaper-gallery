@@ -26,6 +26,11 @@ const props = defineProps({
     type: String,
     default: '16/10',
   },
+  // 热门排名（0表示不是热门）
+  popularRank: {
+    type: Number,
+    default: 0,
+  },
 })
 
 const emit = defineEmits(['click', 'imageLoad'])
@@ -212,6 +217,14 @@ function handleMouseLeave(e) {
   >
     <!-- Image Container -->
     <div class="card-image" :style="viewMode === 'list' ? listImageStyle : cardImageStyle">
+      <!-- 热门标签 -->
+      <div v-if="popularRank > 0 && popularRank <= 10" class="hot-badge" :class="{ 'hot-badge--top3': popularRank <= 3 }">
+        <svg viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
+        </svg>
+        <span>🔥 热门</span>
+      </div>
+
       <!-- Skeleton 骨架屏 -->
       <div v-if="!imageLoaded" class="image-skeleton">
         <div class="skeleton-shimmer" />
@@ -326,6 +339,36 @@ function handleMouseLeave(e) {
     img {
       height: auto;
     }
+  }
+}
+
+// 热门标签
+.hot-badge {
+  position: absolute;
+  top: $spacing-xs;
+  left: $spacing-xs;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 8px;
+  background: linear-gradient(135deg, #f97316, #ef4444);
+  color: white;
+  font-size: 10px;
+  font-weight: $font-weight-bold;
+  border-radius: $radius-full;
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.4);
+
+  svg {
+    width: 12px;
+    height: 12px;
+    display: none;
+  }
+
+  // Top 3 特殊样式
+  &--top3 {
+    background: linear-gradient(135deg, #fbbf24, #f59e0b);
+    box-shadow: 0 2px 8px rgba(245, 158, 11, 0.4);
   }
 }
 

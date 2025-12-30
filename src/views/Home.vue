@@ -5,6 +5,7 @@ import DiyAvatarBanner from '@/components/avatar/DiyAvatarBanner.vue'
 import AnnouncementBanner from '@/components/common/AnnouncementBanner.vue'
 import BackToTop from '@/components/common/BackToTop.vue'
 import FilterPanel from '@/components/common/FilterPanel.vue'
+import PopularWallpapers from '@/components/home/PopularWallpapers.vue'
 import TodayPick from '@/components/home/TodayPick.vue'
 import PortraitWallpaperModal from '@/components/wallpaper/PortraitWallpaperModal.vue'
 import WallpaperGrid from '@/components/wallpaper/WallpaperGrid.vue'
@@ -109,6 +110,14 @@ onMounted(() => {
       <!-- Today's Pick - 仅电脑壁纸系列显示 -->
       <TodayPick
         v-if="wallpapers.length > 0 && !loading && currentSeries === 'desktop'"
+        :wallpapers="wallpapers"
+        @select="handleSelectWallpaper"
+      />
+
+      <!-- 热门壁纸 - 仅电脑壁纸系列显示 -->
+      <PopularWallpapers
+        v-if="wallpapers.length > 0 && !loading && currentSeries === 'desktop'"
+        :series="currentSeries"
         :wallpapers="wallpapers"
         @select="handleSelectWallpaper"
       />
