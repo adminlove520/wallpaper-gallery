@@ -18,14 +18,14 @@ const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 const ROOT_DIR = path.resolve(__dirname, '../..')
 
-describe('Environment Configuration Management', () => {
+describe('environment Configuration Management', () => {
   const envFiles = {
     development: path.join(ROOT_DIR, '.env.development'),
     staging: path.join(ROOT_DIR, '.env.staging'),
     production: path.join(ROOT_DIR, '.env.production'),
   }
 
-  describe('Environment Files Existence', () => {
+  describe('environment Files Existence', () => {
     it('should have all required environment files', () => {
       for (const [env, filePath] of Object.entries(envFiles)) {
         expect(fs.existsSync(filePath), `Missing ${env} env file`).toBe(true)
@@ -33,7 +33,7 @@ describe('Environment Configuration Management', () => {
     })
   })
 
-  describe('Environment Variables Consistency', () => {
+  describe('environment Variables Consistency', () => {
     const requiredVars = ['VITE_ENV', 'VITE_SHOW_ENV_BADGE']
 
     it('should have all required variables in each env file', () => {
@@ -53,7 +53,7 @@ describe('Environment Configuration Management', () => {
     })
   })
 
-  describe('Property Tests: Environment Indicator Display', () => {
+  describe('property Tests: Environment Indicator Display', () => {
     /**
      * Property 3: Environment Indicator Display
      * For any non-production environment, the application should display
@@ -128,7 +128,7 @@ describe('Environment Configuration Management', () => {
     })
   })
 
-  describe('Property Tests: CDN Version Management', () => {
+  describe('property Tests: CDN Version Management', () => {
     /**
      * Property 4: CDN Version Management
      * For any environment deployment, the CDN version should be correctly
@@ -161,7 +161,7 @@ describe('Environment Configuration Management', () => {
     })
   })
 
-  describe('Environment-Specific Settings', () => {
+  describe('environment-Specific Settings', () => {
     /**
      * Validates: Requirements 3.4
      * Different analytics, error tracking, and debugging settings per environment
@@ -181,7 +181,7 @@ describe('Environment Configuration Management', () => {
       expect(prodUmamiMatch[1]).not.toBe(stagingUmamiMatch[1])
     })
 
-    it('should have Supabase config only in production', () => {
+    it('should have Supabase config in production and development environments', () => {
       const prodContent = fs.readFileSync(envFiles.production, 'utf-8')
       const stagingContent = fs.readFileSync(envFiles.staging, 'utf-8')
       const devContent = fs.readFileSync(envFiles.development, 'utf-8')
@@ -190,13 +190,16 @@ describe('Environment Configuration Management', () => {
       expect(prodContent).toContain('VITE_SUPABASE_URL')
       expect(prodContent).toContain('VITE_SUPABASE_ANON_KEY')
 
-      // 测试和开发环境不应该有 Supabase 配置
+      // 开发环境也需要 Supabase 配置（用于壁纸统计功能开发测试）
+      expect(devContent).toContain('VITE_SUPABASE_URL')
+      expect(devContent).toContain('VITE_SUPABASE_ANON_KEY')
+
+      // 测试环境不应该有 Supabase 配置
       expect(stagingContent).not.toContain('VITE_SUPABASE_URL')
-      expect(devContent).not.toContain('VITE_SUPABASE_URL')
     })
   })
 
-  describe('Build Configuration Isolation', () => {
+  describe('build Configuration Isolation', () => {
     /**
      * 验证构建配置不会影响生产环境
      */
@@ -232,7 +235,7 @@ describe('Environment Configuration Management', () => {
   })
 })
 
-describe('Vercel Environment Variables', () => {
+describe('vercel Environment Variables', () => {
   /**
    * 验证 Vercel 配置中的环境变量设置
    */

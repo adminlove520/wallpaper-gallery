@@ -7,7 +7,7 @@ import { useDevice } from '@/composables/useDevice'
 import { useWallpaperType } from '@/composables/useWallpaperType'
 import { trackWallpaperDownload, trackWallpaperPreview } from '@/utils/analytics'
 import { downloadFile, formatDate, formatFileSize, formatRelativeTime, getDisplayFilename, getFileExtension, getResolutionLabel } from '@/utils/format'
-import { getWallpaperDownloadCount, isSupabaseConfigured, recordDownload, recordView } from '@/utils/supabase'
+import { getWallpaperDownloadCount, getWallpaperViewCount, isSupabaseConfigured, recordDownload, recordView } from '@/utils/supabase'
 
 const props = defineProps({
   wallpaper: {
@@ -65,6 +65,10 @@ const loadingOriginal = ref(false)
 const downloadCount = ref(0)
 const loadingDownloadCount = ref(false)
 
+// 访问量
+const viewCount = ref(0)
+const loadingViewCount = ref(false)
+
 // 是否有预览图（仅 desktop 系列）
 const hasPreview = computed(() => !!props.wallpaper?.previewUrl)
 
@@ -95,8 +99,9 @@ watch(() => props.isOpen, async (isOpen) => {
       trackWallpaperPreview(props.wallpaper)
       // 记录到 Supabase 统计
       recordView(props.wallpaper, currentSeries.value)
-      // 获取下载次数
+      // 获取下载次数和访问量
       fetchDownloadCount()
+      fetchViewCount()
     }
 
     // 保存当前滚动位置
@@ -195,9 +200,12 @@ watch(() => props.wallpaper, () => {
   loadingOriginal.value = false
   // 重置下载次数
   downloadCount.value = 0
-  // 如果弹窗已打开，重新获取下载次数
+  // 重置访问量
+  viewCount.value = 0
+  // 如果弹窗已打开，重新获取下载次数和访问量
   if (props.isOpen && props.wallpaper) {
     fetchDownloadCount()
+    fetchViewCount()
   }
 })
 
@@ -218,6 +226,26 @@ async function fetchDownloadCount() {
   }
   finally {
     loadingDownloadCount.value = false
+  }
+}
+
+// 获取访问量
+async function fetchViewCount() {
+  if (!props.wallpaper || !isSupabaseConfigured()) {
+    viewCount.value = 0
+    return
+  }
+
+  loadingViewCount.value = true
+  try {
+    viewCount.value = await getWallpaperViewCount(props.wallpaper.filename, currentSeries.value)
+  }
+  catch (error) {
+    console.error('获取访问量失败:', error)
+    viewCount.value = 0
+  }
+  finally {
+    loadingViewCount.value = false
   }
 }
 
@@ -450,6 +478,20 @@ onUnmounted(() => {
                 <span v-if="isMobile && originalResolution" class="tag" :class="[`tag--${originalResolution.type || 'success'}`]">{{ originalResolution.label }}</span>
                 <span v-else class="tag" :class="[`tag--${resolution.type || 'success'}`]">{{ resolution.label }}</span>
                 <span class="tag tag--secondary">{{ fileExt }}</span>
+                <!-- 浏览量和下载量 -->
+                <span v-if="viewCount > 0" class="tag tag--view">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                    <circle cx="12" cy="12" r="3" />
+                  </svg>
+                  {{ viewCount }}
+                </span>
+                <span v-if="downloadCount > 0" class="tag tag--download">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" />
+                  </svg>
+                  {{ downloadCount }}
+                </span>
               </div>
             </div>
 
@@ -537,14 +579,6 @@ onUnmounted(() => {
               <p class="original-hint">
                 下载获取完整高清原图
               </p>
-            </div>
-
-            <!-- 下载次数显示 -->
-            <div v-if="downloadCount > 0" class="download-count-badge">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" />
-              </svg>
-              <span>已有 <strong>{{ downloadCount }}</strong> 次下载</span>
             </div>
 
             <!-- 操作按钮组 -->
@@ -906,6 +940,34 @@ onUnmounted(() => {
     color: var(--color-text-secondary);
   }
 
+  &--view {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(59, 130, 246, 0.15);
+    color: #3b82f6;
+    font-weight: $font-weight-bold;
+
+    svg {
+      width: 12px;
+      height: 12px;
+    }
+  }
+
+  &--download {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(16, 185, 129, 0.15);
+    color: var(--color-success);
+    font-weight: $font-weight-bold;
+
+    svg {
+      width: 12px;
+      height: 12px;
+    }
+  }
+
   &--dark {
     background: rgba(0, 0, 0, 0.6);
     color: white;
@@ -1090,29 +1152,7 @@ onUnmounted(() => {
   z-index: 1;
 }
 
-// 下载次数显示
-.download-count-badge {
-  display: flex;
-  align-items: center;
-  gap: $spacing-sm;
-  padding: $spacing-sm $spacing-md;
-  background: rgba(16, 185, 129, 0.1);
-  border: 1px solid rgba(16, 185, 129, 0.2);
-  border-radius: var(--radius-md);
-  font-size: $font-size-sm;
-  color: var(--color-text-secondary);
-
-  svg {
-    width: 16px;
-    height: 16px;
-    color: var(--color-success);
-  }
-
-  strong {
-    color: var(--color-success);
-    font-weight: $font-weight-semibold;
-  }
-}
+// 浏览量和下载量标签样式已移至 .tag--view 和 .tag--download
 
 // 操作按钮组
 .action-buttons {

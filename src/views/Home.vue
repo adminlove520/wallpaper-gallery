@@ -16,7 +16,7 @@ import { useModal } from '@/composables/useModal'
 import { useSearch } from '@/composables/useSearch'
 import { useWallpapers } from '@/composables/useWallpapers'
 import { useWallpaperType } from '@/composables/useWallpaperType'
-import { getPopularWallpapers, isSupabaseConfigured } from '@/utils/supabase'
+import { getPopularByTimeRange, getPopularWallpapers, isSupabaseConfigured } from '@/utils/supabase'
 
 const route = useRoute()
 
@@ -31,6 +31,8 @@ const { wallpapers, loading: wallpapersLoading, error, total, fetchWallpapers, g
 
 // 热门数据（用于排序）
 const popularityData = ref([])
+const weeklyPopularityData = ref([])
+const monthlyPopularityData = ref([])
 const popularityLoading = ref(false)
 
 // 整体加载状态：壁纸和热门数据都加载完成才算完成
@@ -40,16 +42,27 @@ const loading = computed(() => wallpapersLoading.value || popularityLoading.valu
 async function fetchPopularityData(series) {
   if (!isSupabaseConfigured()) {
     popularityData.value = []
+    weeklyPopularityData.value = []
+    monthlyPopularityData.value = []
     return
   }
   popularityLoading.value = true
   try {
-    // 获取前100名热门数据用于排序
-    popularityData.value = await getPopularWallpapers(series, 100)
+    // 并行获取全量、本周、本月热门数据
+    const [allData, weeklyData, monthlyData] = await Promise.all([
+      getPopularWallpapers(series, 100),
+      getPopularByTimeRange(series, 7, 100),
+      getPopularByTimeRange(series, 30, 100),
+    ])
+    popularityData.value = allData
+    weeklyPopularityData.value = weeklyData
+    monthlyPopularityData.value = monthlyData
   }
   catch (err) {
     console.error('获取热门数据失败:', err)
     popularityData.value = []
+    weeklyPopularityData.value = []
+    monthlyPopularityData.value = []
   }
   finally {
     popularityLoading.value = false
@@ -80,7 +93,7 @@ watch(currentSeries, async (newSeries) => {
 }, { immediate: false })
 
 // Filter（传入热门数据和当前系列）
-const { sortBy, formatFilter, categoryFilter, subcategoryFilter, categoryOptions, subcategoryOptions, filteredWallpapers, resultCount, hasActiveFilters, resetFilters } = useFilter(wallpapers, searchQuery, popularityData, currentSeries)
+const { sortBy, formatFilter, categoryFilter, subcategoryFilter, categoryOptions, subcategoryOptions, filteredWallpapers, resultCount, hasActiveFilters, resetFilters } = useFilter(wallpapers, searchQuery, popularityData, currentSeries, weeklyPopularityData, monthlyPopularityData)
 
 // Modal
 const { isOpen, currentData, open, close, updateData } = useModal()

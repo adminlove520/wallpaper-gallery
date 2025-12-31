@@ -3,7 +3,7 @@ import { gsap } from 'gsap'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useDevice } from '@/composables/useDevice'
 import { IMAGE_PROXY } from '@/utils/constants'
-import { formatFileSize, formatRelativeTime, getDisplayFilename, highlightText } from '@/utils/format'
+import { formatFileSize, formatNumber, formatRelativeTime, getDisplayFilename, highlightText } from '@/utils/format'
 
 const props = defineProps({
   wallpaper: {
@@ -33,6 +33,11 @@ const props = defineProps({
   },
   // 下载次数
   downloadCount: {
+    type: Number,
+    default: 0,
+  },
+  // 访问量
+  viewCount: {
     type: Number,
     default: 0,
   },
@@ -277,19 +282,34 @@ function handleMouseLeave(e) {
 
     <!-- Card Info -->
     <div class="card-info">
+      <!-- 第一行：文件名 -->
       <p class="card-filename" :title="displayFilename">
         <template v-for="(part, idx) in highlightedFilename" :key="idx">
           <span v-if="part.highlight" class="highlight">{{ part.text }}</span>
           <span v-else>{{ part.text }}</span>
         </template>
       </p>
+      <!-- 第二行：文件大小、访问量、下载量 -->
       <div class="card-meta">
         <span class="meta-item">{{ formattedSize }}</span>
-        <!-- 下载次数（简化显示） -->
-        <span v-if="downloadCount > 0" class="meta-item meta-downloads">
-          ↓{{ downloadCount }}
+        <!-- 访问量 -->
+        <span v-if="viewCount > 0" class="meta-item meta-views">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+            <circle cx="12" cy="12" r="3" />
+          </svg>
+          {{ formatNumber(viewCount) }}
         </span>
-        <!-- 上传时间 -->
+        <!-- 下载次数 -->
+        <span v-if="downloadCount > 0" class="meta-item meta-downloads">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" />
+          </svg>
+          {{ formatNumber(downloadCount) }}
+        </span>
+      </div>
+      <!-- 第三行：上传时间、格式标签 -->
+      <div class="card-meta-secondary">
         <span class="meta-item meta-time">{{ relativeTime }}</span>
         <span class="meta-item meta-format">{{ fileFormat }}</span>
       </div>
@@ -501,6 +521,15 @@ function handleMouseLeave(e) {
   gap: $spacing-sm;
   font-size: $font-size-xs;
   color: var(--color-text-muted);
+  margin-bottom: $spacing-xs;
+}
+
+.card-meta-secondary {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  font-size: $font-size-xs;
+  color: var(--color-text-muted);
 }
 
 .meta-item {
@@ -508,6 +537,10 @@ function handleMouseLeave(e) {
   align-items: center;
   gap: 2px;
   white-space: nowrap;
+}
+
+.meta-time {
+  color: var(--color-text-muted);
 }
 
 .meta-format {
@@ -518,16 +551,22 @@ function handleMouseLeave(e) {
   font-size: 10px;
 }
 
-.meta-downloads {
-  color: var(--color-success);
+.meta-views {
+  color: var(--color-text-muted);
 
   svg {
-    color: var(--color-success);
+    width: 12px;
+    height: 12px;
   }
 }
 
-.meta-time {
+.meta-downloads {
   color: var(--color-text-muted);
+
+  svg {
+    width: 12px;
+    height: 12px;
+  }
 }
 
 // 列表视图模式

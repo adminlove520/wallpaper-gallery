@@ -203,9 +203,6 @@ function formatNumber(num) {
                 class="popular-slide__image"
                 loading="lazy"
               >
-              <div class="popular-slide__title">
-                {{ wallpaper.title || wallpaper.filename }}
-              </div>
             </div>
           </SwiperSlide>
         </Swiper>
@@ -327,21 +324,6 @@ function formatNumber(num) {
   .popular-slide:hover & {
     transform: scale(1.05);
   }
-}
-
-.popular-slide__title {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  padding: $spacing-lg $spacing-md $spacing-md;
-  background: linear-gradient(transparent, rgba(0, 0, 0, 0.7));
-  color: white;
-  font-size: $font-size-sm;
-  font-weight: $font-weight-medium;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .swiper-pagination {

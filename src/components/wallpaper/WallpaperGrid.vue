@@ -51,7 +51,7 @@ const { currentSeries, currentSeriesConfig, availableSeriesOptions } = useWallpa
 const { viewMode, setViewMode } = useViewMode()
 const { isMobile } = useDevice()
 
-// 从 props.popularityData 获取热门排名和下载次数
+// 从 props.popularityData 获取热门排名、下载次数和访问量
 function getPopularRank(filename) {
   if (!props.popularityData || props.popularityData.length === 0) {
     return 0
@@ -66,6 +66,14 @@ function getDownloadCount(filename) {
   }
   const item = props.popularityData.find(item => item.filename === filename)
   return item?.download_count || 0
+}
+
+function getViewCount(filename) {
+  if (!props.popularityData || props.popularityData.length === 0) {
+    return 0
+  }
+  const item = props.popularityData.find(item => item.filename === filename)
+  return item?.view_count || 0
 }
 
 const gridRef = ref(null)
@@ -737,6 +745,7 @@ const skeletonCount = computed(() => isMobile.value ? 6 : 12)
             :aspect-ratio="currentSeriesConfig?.aspectRatio || '16/10'"
             :popular-rank="getPopularRank(wallpaper.filename)"
             :download-count="getDownloadCount(wallpaper.filename)"
+            :view-count="getViewCount(wallpaper.filename)"
             @click="handleSelect"
             @image-load="handleImageLoad('left', index)"
           />
@@ -752,6 +761,7 @@ const skeletonCount = computed(() => isMobile.value ? 6 : 12)
             :aspect-ratio="currentSeriesConfig?.aspectRatio || '16/10'"
             :popular-rank="getPopularRank(wallpaper.filename)"
             :download-count="getDownloadCount(wallpaper.filename)"
+            :view-count="getViewCount(wallpaper.filename)"
             @click="handleSelect"
             @image-load="handleImageLoad('right', index)"
           />
@@ -778,6 +788,7 @@ const skeletonCount = computed(() => isMobile.value ? 6 : 12)
           :aspect-ratio="currentSeriesConfig?.aspectRatio || '16/10'"
           :popular-rank="getPopularRank(wallpaper.filename)"
           :download-count="getDownloadCount(wallpaper.filename)"
+          :view-count="getViewCount(wallpaper.filename)"
           @click="handleSelect"
         />
       </div>

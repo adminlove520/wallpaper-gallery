@@ -59,6 +59,18 @@ export function getResolutionLabel(width, height) {
 }
 
 /**
+ * 格式化数字（如 1.2k）
+ * @param {number} num - 数字
+ * @returns {string} 格式化后的数字字符串
+ */
+export function formatNumber(num) {
+  if (num >= 1000) {
+    return `${(num / 1000).toFixed(1)}k`
+  }
+  return num.toString()
+}
+
+/**
  * 格式化文件大小
  * @param {number} bytes - 字节数
  * @returns {string} 格式化后的大小字符串

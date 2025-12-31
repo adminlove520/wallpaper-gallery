@@ -16,7 +16,7 @@ function getDefaultSort(series) {
   return ['mobile', 'avatar'].includes(series) ? 'popular' : 'newest'
 }
 
-export function useFilter(wallpapers, externalSearchQuery = null, popularityData = null, currentSeries = null) {
+export function useFilter(wallpapers, externalSearchQuery = null, popularityData = null, currentSeries = null, weeklyPopularityData = null, monthlyPopularityData = null) {
   // 搜索关键词（支持外部传入或内部管理）
   const searchQuery = externalSearchQuery || ref('')
   const debouncedQuery = ref('')
@@ -237,6 +237,85 @@ export function useFilter(wallpapers, externalSearchQuery = null, popularityData
               return new Date(b.createdAt) - new Date(a.createdAt)
             }
             return countB - countA
+          })
+        }
+        break
+      case 'views':
+        // 按浏览量排序（需要热门数据）
+        if (popularityData && popularityData.value) {
+          const viewMap = new Map(
+            popularityData.value.map(item => [item.filename, item.view_count || 0]),
+          )
+          result.sort((a, b) => {
+            const countA = viewMap.get(a.filename) || 0
+            const countB = viewMap.get(b.filename) || 0
+            // 浏览量相同时按最新排序
+            if (countB === countA) {
+              return new Date(b.createdAt) - new Date(a.createdAt)
+            }
+            return countB - countA
+          })
+        }
+        break
+      case 'weekly-hot':
+        // 按本周热度排序（需要本周热门数据）
+        if (weeklyPopularityData && weeklyPopularityData.value && weeklyPopularityData.value.length > 0) {
+          const weeklyMap = new Map(
+            weeklyPopularityData.value.map(item => [item.filename, item.popularity_score || 0]),
+          )
+          result.sort((a, b) => {
+            const scoreA = weeklyMap.get(a.filename) || 0
+            const scoreB = weeklyMap.get(b.filename) || 0
+            // 热度相同时按最新排序
+            if (scoreB === scoreA) {
+              return new Date(b.createdAt) - new Date(a.createdAt)
+            }
+            return scoreB - scoreA
+          })
+        }
+        else if (popularityData && popularityData.value) {
+          // 降级：使用全量热门数据
+          const popularMap = new Map(
+            popularityData.value.map(item => [item.filename, item.popularity_score || 0]),
+          )
+          result.sort((a, b) => {
+            const scoreA = popularMap.get(a.filename) || 0
+            const scoreB = popularMap.get(b.filename) || 0
+            if (scoreB === scoreA) {
+              return new Date(b.createdAt) - new Date(a.createdAt)
+            }
+            return scoreB - scoreA
+          })
+        }
+        break
+      case 'monthly-hot':
+        // 按本月热度排序（需要本月热门数据）
+        if (monthlyPopularityData && monthlyPopularityData.value && monthlyPopularityData.value.length > 0) {
+          const monthlyMap = new Map(
+            monthlyPopularityData.value.map(item => [item.filename, item.popularity_score || 0]),
+          )
+          result.sort((a, b) => {
+            const scoreA = monthlyMap.get(a.filename) || 0
+            const scoreB = monthlyMap.get(b.filename) || 0
+            // 热度相同时按最新排序
+            if (scoreB === scoreA) {
+              return new Date(b.createdAt) - new Date(a.createdAt)
+            }
+            return scoreB - scoreA
+          })
+        }
+        else if (popularityData && popularityData.value) {
+          // 降级：使用全量热门数据
+          const popularMap = new Map(
+            popularityData.value.map(item => [item.filename, item.popularity_score || 0]),
+          )
+          result.sort((a, b) => {
+            const scoreA = popularMap.get(a.filename) || 0
+            const scoreB = popularMap.get(b.filename) || 0
+            if (scoreB === scoreA) {
+              return new Date(b.createdAt) - new Date(a.createdAt)
+            }
+            return scoreB - scoreA
           })
         }
         break
