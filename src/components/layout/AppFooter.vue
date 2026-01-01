@@ -1,8 +1,19 @@
 <script setup>
-import { useWallpapers } from '@/composables/useWallpapers'
+import { computed } from 'vue'
+import { useWallpaperStore } from '@/stores/wallpaper'
+import { formatFileSize } from '@/utils/format'
 
 const currentYear = new Date().getFullYear()
-const { statistics } = useWallpapers()
+const wallpaperStore = useWallpaperStore()
+
+// 从 store 获取统计信息并格式化
+const statistics = computed(() => {
+  const stats = wallpaperStore.statistics
+  return {
+    ...stats,
+    totalSizeFormatted: formatFileSize(stats.totalSize || 0),
+  }
+})
 </script>
 
 <template>
