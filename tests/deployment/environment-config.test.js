@@ -99,7 +99,7 @@ describe('environment Configuration Management', () => {
       fc.assert(
         fc.property(
           fc.constantFrom(...Object.entries(envColors)),
-          ([env, color]) => {
+          ([_env, color]) => {
             expect(envBadgeContent).toContain(color)
             return true
           },
@@ -118,7 +118,7 @@ describe('environment Configuration Management', () => {
       fc.assert(
         fc.property(
           fc.constantFrom(...Object.entries(envLabels)),
-          ([env, label]) => {
+          ([_env, label]) => {
             expect(envBadgeContent).toContain(label)
             return true
           },
@@ -152,7 +152,7 @@ describe('environment Configuration Management', () => {
     })
 
     it('should use CDN_VERSION in URL construction', () => {
-      expect(constantsContent).toContain('${CDN_VERSION}')
+      expect(constantsContent).toContain('$' + '{CDN_VERSION}')
     })
 
     it('should have CDN base URL properly constructed', () => {
