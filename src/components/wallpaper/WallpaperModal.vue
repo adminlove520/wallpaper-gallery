@@ -873,11 +873,13 @@ onUnmounted(() => {
   gap: $spacing-lg;
   padding: $spacing-lg;
   background: var(--color-bg-card);
+  overflow-y: auto; // 允许滚动查看所有内容
 
   // 移动端底部圆角 + 增加间距（不再过于紧凑）
   @include mobile-only {
     gap: $spacing-md;
     padding: $spacing-md $spacing-lg;
+    padding-bottom: max($spacing-lg, env(safe-area-inset-bottom)); // 适配底部安全区域
     border-radius: 0 0 var(--radius-xl) var(--radius-xl);
   }
 
