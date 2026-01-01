@@ -237,10 +237,12 @@ export const useWallpaperStore = defineStore('wallpaper', () => {
         loadedCategories.value.add(cat.file)
       })
 
-      // 5. 后台异步加载剩余分类（不阻塞）
+      // 5. 延迟3秒后再开始后台加载剩余分类（避免干扰首屏渲染）
       const remainingCategories = indexData.categories.slice(3)
       if (remainingCategories.length > 0) {
-        loadRemainingCategories(seriesId, remainingCategories)
+        setTimeout(() => {
+          loadRemainingCategories(seriesId, remainingCategories)
+        }, 3000) // 延迟3秒
       }
     }
     catch (e) {
@@ -255,26 +257,36 @@ export const useWallpaperStore = defineStore('wallpaper', () => {
 
   /**
    * 后台加载剩余分类（不阻塞主流程）
+   * 优化：批量更新，减少响应式触发次数
    */
   async function loadRemainingCategories(seriesId, categories) {
-    for (const cat of categories) {
-      // 检查是否已加载
-      if (loadedCategories.value.has(cat.file)) {
-        continue
-      }
+    const batchSize = 5 // 每次批量加载5个分类
+    const batches = []
 
+    // 将分类分组为批次
+    for (let i = 0; i < categories.length; i += batchSize) {
+      batches.push(categories.slice(i, i + batchSize))
+    }
+
+    for (const batch of batches) {
       try {
-        const categoryData = await loadCategory(seriesId, cat.file)
-        // 追加到现有数据
-        wallpapers.value = [...wallpapers.value, ...categoryData]
-        loadedCategories.value.add(cat.file)
+        // 并行加载一批分类
+        const batchPromises = batch.map(cat => loadCategory(seriesId, cat.file))
+        const batchData = await Promise.all(batchPromises)
 
-        // 每加载一个分类后暂停一下，避免阻塞主线程
-        await new Promise(resolve => setTimeout(resolve, 100))
+        // 批量更新（只触发一次响应式更新）
+        const newWallpapers = batchData.flat()
+        wallpapers.value = [...wallpapers.value, ...newWallpapers]
+
+        // 记录已加载的分类
+        batch.forEach(cat => loadedCategories.value.add(cat.file))
+
+        // 每个批次之间暂停，避免阻塞主线程
+        await new Promise(resolve => setTimeout(resolve, 200))
       }
       catch (e) {
-        console.warn(`Failed to load category ${cat.file}:`, e)
-        // 继续加载其他分类
+        console.warn('Failed to load batch:', e)
+        // 继续加载下一批
       }
     }
   }
