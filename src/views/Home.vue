@@ -196,16 +196,6 @@ onMounted(async () => {
         :popularity-data="popularityStore.allTimeData"
         :loading="loading"
         @select="handleSelectWallpaper"
-      /> -->
-
-      <!-- 热门壁纸 - 仅电脑壁纸系列显示 -->
-      <PopularWallpapers
-        v-if="currentSeries === 'desktop'"
-        :series="currentSeries"
-        :wallpapers="wallpapers"
-        :popularity-data="popularityData"
-        :loading="loading"
-        @select="handleSelectWallpaper"
       />
 
       <!-- 热门壁纸 2D 版本（备用，如需切换可替换上方组件）
