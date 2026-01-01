@@ -495,36 +495,43 @@ onUnmounted(() => {
               </div>
             </div>
 
-            <div class="info-details" :class="{ 'info-details--compact': isMobile }">
-              <!-- 移动端紧凑布局：直接显示原图信息 -->
-              <template v-if="isMobile">
-                <!-- 第一行：原图分辨率 -->
-                <div v-if="originalResolution" class="detail-row">
-                  <div class="detail-item detail-item--highlight">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
-                      <path d="M8 21h8M12 17v4" />
-                    </svg>
-                    <span>{{ originalResolution.width }} × {{ originalResolution.height }}</span>
-                  </div>
+            <!-- 移动端：原图信息卡片（突出显示高清质量） -->
+            <div v-if="isMobile && originalResolution" class="mobile-original-card">
+              <div class="mobile-card-header">
+                <span class="mobile-card-label">原图信息</span>
+                <span class="mobile-resolution-tag" :class="[`tag--${originalResolution.type || 'success'}`]">
+                  {{ originalResolution.label }}
+                </span>
+              </div>
+              <div class="mobile-card-details">
+                <div class="mobile-card-item">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
+                    <path d="M8 21h8M12 17v4" />
+                  </svg>
+                  <span class="mobile-card-value">{{ originalResolution.width }} × {{ originalResolution.height }}</span>
                 </div>
-                <!-- 第二行：文件大小 + 日期 -->
-                <div class="detail-row">
-                  <div class="detail-item">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" />
-                    </svg>
-                    <span>{{ formattedSize }}</span>
-                  </div>
-                  <div class="detail-item">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-                      <line x1="16" y1="2" x2="16" y2="6" />
-                      <line x1="8" y1="2" x2="8" y2="6" />
-                      <line x1="3" y1="10" x2="21" y2="10" />
-                    </svg>
-                    <span>{{ formattedDate }}</span>
-                  </div>
+                <div class="mobile-card-item">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" />
+                  </svg>
+                  <span class="mobile-card-value">{{ formattedSize }}</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="info-details" :class="{ 'info-details--compact': isMobile }">
+              <!-- 移动端紧凑布局：上传时间 -->
+              <template v-if="isMobile">
+                <div class="detail-item">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                    <line x1="16" y1="2" x2="16" y2="6" />
+                    <line x1="8" y1="2" x2="8" y2="6" />
+                    <line x1="3" y1="10" x2="21" y2="10" />
+                  </svg>
+                  <span>{{ formattedDate }}</span>
+                  <span class="detail-sub">({{ relativeTime }})</span>
                 </div>
               </template>
 
@@ -867,10 +874,10 @@ onUnmounted(() => {
   padding: $spacing-lg;
   background: var(--color-bg-card);
 
-  // 移动端底部圆角 + 缩小间距
+  // 移动端底部圆角 + 增加间距（不再过于紧凑）
   @include mobile-only {
-    gap: $spacing-sm;
-    padding: $spacing-md;
+    gap: $spacing-md;
+    padding: $spacing-md $spacing-lg;
     border-radius: 0 0 var(--radius-xl) var(--radius-xl);
   }
 
@@ -986,24 +993,100 @@ onUnmounted(() => {
   background: var(--color-bg-hover);
   border-radius: var(--radius-md);
 
-  // 移动端紧凑布局
+  // 移动端布局（增加间距，不再过于紧凑）
   &--compact {
-    gap: $spacing-xs;
-    padding: $spacing-sm;
+    gap: $spacing-sm;
+    padding: $spacing-md;
   }
 }
 
-// 移动端详情行
-.detail-row {
+// 移动端原图信息卡片（类似 PC 端，突出显示高清质量）
+.mobile-original-card {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+  padding: $spacing-md;
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.12) 0%, rgba(16, 185, 129, 0.12) 100%);
+  border: 1px solid rgba(99, 102, 241, 0.25);
+  border-radius: var(--radius-md);
+  margin-bottom: $spacing-sm;
+
+  // 移动端更紧凑的视觉效果
+  @include mobile-only {
+    padding: $spacing-sm $spacing-md;
+  }
+}
+
+.mobile-card-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: $spacing-md;
+}
 
-  .detail-item {
-    flex: 1;
-    min-width: 0;
+.mobile-card-label {
+  font-size: $font-size-xs;
+  font-weight: $font-weight-semibold;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.mobile-resolution-tag {
+  padding: 4px 10px;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-bold;
+  border-radius: $radius-sm;
+  letter-spacing: 0.3px;
+
+  &.tag--danger {
+    background: rgba(239, 68, 68, 0.2);
+    color: #ef4444;
   }
+
+  &.tag--warning {
+    background: rgba(245, 158, 11, 0.2);
+    color: #f59e0b;
+  }
+
+  &.tag--info {
+    background: rgba(59, 130, 246, 0.2);
+    color: #3b82f6;
+  }
+
+  &.tag--success {
+    background: rgba(16, 185, 129, 0.2);
+    color: #10b981;
+  }
+
+  &.tag--primary {
+    background: rgba(99, 102, 241, 0.2);
+    color: var(--color-accent);
+  }
+}
+
+.mobile-card-details {
+  display: flex;
+  gap: $spacing-md;
+}
+
+.mobile-card-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+
+  svg {
+    width: 16px;
+    height: 16px;
+    color: var(--color-accent);
+    flex-shrink: 0;
+  }
+}
+
+.mobile-card-value {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  color: var(--color-text-primary);
 }
 
 .detail-item {
