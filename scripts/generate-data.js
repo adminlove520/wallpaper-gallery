@@ -84,6 +84,13 @@ const CONFIG = {
       outputFile: 'avatar.json',
       hasPreview: false,
     },
+    bing: {
+      id: 'bing',
+      name: '每日Bing',
+      metadataDir: 'bing/meta',
+      outputFile: 'bing',
+      isBing: true,
+    },
   },
 }
 
@@ -610,7 +617,122 @@ function generateCategorySplitData(wallpapers, seriesId, seriesConfig) {
  *
  * 注意：CI 环境会自动 checkout nuanXinProPic 仓库到本地
  */
+
+/**
+ * 处理 Bing 每日壁纸系列（纯元数据模式）
+ * 从本地图床仓库或线上数据源复制 JSON 元数据文件
+ */
+async function processBingSeries(seriesId, seriesConfig) {
+  console.log('')
+  console.log(`Processing series: ${seriesConfig.name} (${seriesId})`)
+  console.log('-'.repeat(40))
+
+  const bingOutputDir = path.join(CONFIG.OUTPUT_DIR, 'bing')
+
+  // 确保输出目录存在
+  if (!fs.existsSync(bingOutputDir)) {
+    fs.mkdirSync(bingOutputDir, { recursive: true })
+  }
+
+  // 1. 优先尝试从本地图床仓库复制
+  for (const repoPath of CONFIG.LOCAL_REPO_PATHS) {
+    if (fs.existsSync(repoPath)) {
+      const bingSrcDir = path.join(repoPath, seriesConfig.metadataDir)
+
+      if (fs.existsSync(bingSrcDir)) {
+        console.log(`  Found local Bing metadata: ${bingSrcDir}`)
+
+        // 复制所有 JSON 文件
+        const files = fs.readdirSync(bingSrcDir).filter(f => f.endsWith('.json'))
+        let totalItems = 0
+
+        for (const file of files) {
+          const srcPath = path.join(bingSrcDir, file)
+          const destPath = path.join(bingOutputDir, file)
+          fs.copyFileSync(srcPath, destPath)
+          console.log(`  Copied: ${file}`)
+
+          // 统计总数
+          if (file === 'index.json') {
+            try {
+              const indexData = JSON.parse(fs.readFileSync(srcPath, 'utf-8'))
+              totalItems = indexData.total || 0
+            }
+            catch {
+              // 忽略解析错误
+            }
+          }
+        }
+
+        console.log(`  ✅ Copied ${files.length} files from local repository`)
+        return { seriesId, count: totalItems, wallpapers: [], fromLocal: true }
+      }
+    }
+  }
+
+  // 2. 从线上拉取
+  console.log('  Fetching Bing data from online...')
+
+  try {
+    // 获取 index.json
+    const indexUrl = `${CONFIG.ONLINE_DATA_BASE_URL}/bing/index.json`
+    const indexResponse = await fetch(indexUrl)
+
+    if (!indexResponse.ok) {
+      throw new Error(`Failed to fetch ${indexUrl}`)
+    }
+
+    const indexData = await indexResponse.json()
+    fs.writeFileSync(path.join(bingOutputDir, 'index.json'), JSON.stringify(indexData, null, 2))
+    console.log('  Downloaded: index.json')
+
+    // 获取 latest.json
+    try {
+      const latestUrl = `${CONFIG.ONLINE_DATA_BASE_URL}/bing/latest.json`
+      const latestResponse = await fetch(latestUrl)
+      if (latestResponse.ok) {
+        const latestData = await latestResponse.json()
+        fs.writeFileSync(path.join(bingOutputDir, 'latest.json'), JSON.stringify(latestData, null, 2))
+        console.log('  Downloaded: latest.json')
+      }
+    }
+    catch {
+      console.log('  ⚠️ latest.json not available')
+    }
+
+    // 获取年度数据文件
+    if (indexData.years && Array.isArray(indexData.years)) {
+      for (const yearInfo of indexData.years) {
+        try {
+          const yearUrl = `${CONFIG.ONLINE_DATA_BASE_URL}/bing/${yearInfo.file}`
+          const yearResponse = await fetch(yearUrl)
+          if (yearResponse.ok) {
+            const yearData = await yearResponse.json()
+            fs.writeFileSync(path.join(bingOutputDir, yearInfo.file), JSON.stringify(yearData, null, 2))
+            console.log(`  Downloaded: ${yearInfo.file}`)
+          }
+        }
+        catch {
+          console.log(`  ⚠️ Failed to download ${yearInfo.file}`)
+        }
+      }
+    }
+
+    console.log(`  ✅ Downloaded Bing data: ${indexData.total || 0} items`)
+    return { seriesId, count: indexData.total || 0, wallpapers: [], fromOnline: true }
+  }
+  catch (e) {
+    console.log(`  ❌ Failed to fetch Bing data: ${e.message}`)
+    return { seriesId, count: 0, wallpapers: [], fromOnline: false }
+  }
+}
+
 async function processSeries(seriesId, seriesConfig) {
+  // Bing 系列使用特殊处理逻辑
+  if (seriesConfig.isBing) {
+    return processBingSeries(seriesId, seriesConfig)
+  }
+
   console.log('')
   console.log(`Processing series: ${seriesConfig.name} (${seriesId})`)
   console.log('-'.repeat(40))
