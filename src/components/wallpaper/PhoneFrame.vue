@@ -53,34 +53,10 @@ const { isMobile, isDesktop } = useDevice()
 // 初始值根据设备类型设置，但需要等待 onMounted 时再确认
 const isExpanded = ref(false)
 
-// 悬浮球位置（从 localStorage 读取或使用默认位置）
-const POSITION_STORAGE_KEY = 'phone-frame-size-selector-position'
-let savedPosition = null
-try {
-  const saved = localStorage.getItem(POSITION_STORAGE_KEY)
-  if (saved) {
-    const parsed = JSON.parse(saved)
-    savedPosition = { x: parsed.x, y: parsed.y }
-  }
-}
-catch (e) {
-  console.warn('Failed to load saved position:', e)
-}
-// 初始位置会在 onMounted 时计算，确保使用正确的窗口尺寸
-const position = ref(savedPosition || { x: 0, y: 0 })
-
-// 拖拽状态
-const isDragging = ref(false)
-const dragStart = ref({ x: 0, y: 0 })
-const dragOffset = ref({ x: 0, y: 0 })
-const hasDragged = ref(false) // 标记是否发生了拖拽
-const shouldTriggerClick = ref(false) // 标记是否应该触发点击（在 mouseup 时）
-
-// 悬浮球和选项容器引用
+// 悬浮球和选项容器引用（悬浮球固定在右上角，不支持拖拽）
 const selectorRef = ref(null)
 const optionsRef = ref(null)
 let expandAnimation = null
-let positionAnimation = null
 
 // 使用 GSAP 处理展开/收缩动画（仅移动端悬浮球使用）
 async function toggleExpand(newExpanded) {
@@ -188,153 +164,19 @@ watch(isExpanded, (newExpanded) => {
   }
 })
 
-// 保存位置到 localStorage
-function savePosition() {
-  try {
-    localStorage.setItem(POSITION_STORAGE_KEY, JSON.stringify(position.value))
-  }
-  catch (e) {
-    console.warn('Failed to save position:', e)
-  }
-}
-
-// 拖拽处理
-function handleDragStart(e) {
-  // 阻止事件冒泡，避免触发父元素的点击事件
-  e.stopPropagation()
-  e.preventDefault()
-
-  isDragging.value = true
-  hasDragged.value = false
-  shouldTriggerClick.value = true // 标记可能触发点击
-  const clientX = e.touches ? e.touches[0].clientX : e.clientX
-  const clientY = e.touches ? e.touches[0].clientY : e.clientY
-  dragStart.value = { x: clientX, y: clientY }
-  dragOffset.value = { x: 0, y: 0 }
-}
-
-function handleDragMove(e) {
-  if (!isDragging.value)
-    return
-
-  const clientX = e.touches ? e.touches[0].clientX : e.clientX
-  const clientY = e.touches ? e.touches[0].clientY : e.clientY
-
-  dragOffset.value = {
-    x: clientX - dragStart.value.x,
-    y: clientY - dragStart.value.y,
-  }
-
-  // 如果移动距离超过阈值，标记为拖拽
-  if (Math.abs(dragOffset.value.x) > 5 || Math.abs(dragOffset.value.y) > 5) {
-    hasDragged.value = true
-  }
-
-  // 实时更新位置（使用 GSAP 实现丝滑动画）
-  if (selectorRef.value && hasDragged.value) {
-    const ballSize = 56 // 悬浮球大小
-    const newX = position.value.x + dragOffset.value.x
-    const newY = position.value.y + dragOffset.value.y
-
-    // 限制在可视区域内
-    const maxX = window.innerWidth - ballSize
-    const maxY = window.innerHeight - ballSize
-
-    const clampedX = Math.max(0, Math.min(newX, maxX))
-    const clampedY = Math.max(0, Math.min(newY, maxY))
-
-    gsap.set(selectorRef.value, {
-      x: clampedX,
-      y: clampedY,
-    })
-  }
-
-  e.preventDefault()
-}
-
-function handleDragEnd() {
-  if (!isDragging.value)
-    return
-
-  // 如果发生了拖拽，更新最终位置
-  if (hasDragged.value) {
-    const ballSize = 56
-    const newX = position.value.x + dragOffset.value.x
-    const newY = position.value.y + dragOffset.value.y
-
-    // 限制在可视区域内
-    const maxX = window.innerWidth - ballSize
-    const maxY = window.innerHeight - ballSize
-
-    position.value = {
-      x: Math.max(0, Math.min(newX, maxX)),
-      y: Math.max(0, Math.min(newY, maxY)),
-    }
-
-    // 使用 GSAP 平滑移动到最终位置（如果有边界限制）
-    if (selectorRef.value) {
-      if (positionAnimation) {
-        positionAnimation.kill()
-      }
-      positionAnimation = gsap.to(selectorRef.value, {
-        x: position.value.x,
-        y: position.value.y,
-        duration: 0.25,
-        ease: 'power2.out',
-        onComplete: () => {
-          savePosition()
-        },
-      })
-    }
-    else {
-      savePosition()
-    }
-
-    // 如果发生了拖拽，不触发点击
-    shouldTriggerClick.value = false
-    // 延迟重置状态
-    setTimeout(() => {
-      isDragging.value = false
-      dragOffset.value = { x: 0, y: 0 }
-      hasDragged.value = false
-    }, 100)
-  }
-  else {
-    // 如果没有拖拽（只是点击），立即重置状态，允许点击事件触发
-    isDragging.value = false
-    dragOffset.value = { x: 0, y: 0 }
-    hasDragged.value = false
-    // shouldTriggerClick 保持为 true，等待 mouseup 事件触发点击
-  }
-}
-
-// 点击悬浮球展开/收缩（区分拖拽和点击）
-// 注意：这个函数在 mouseup/touchend 时调用
+// 点击悬浮球展开/收缩
 function handleFloatingBallClick(e) {
   // 阻止事件冒泡，避免触发父元素的点击事件（如真机退出提示）
   e.stopPropagation()
   e.preventDefault()
-
-  // 如果发生了拖拽，或者不应该触发点击，则不处理
-  if (hasDragged.value || !shouldTriggerClick.value) {
-    shouldTriggerClick.value = false
-    return
-  }
-
   // 直接切换展开状态
   isExpanded.value = !isExpanded.value
-  shouldTriggerClick.value = false
 }
 
 // 点击外部区域关闭展开的选项列表
 function handleClickOutside(e) {
   // 如果选项列表已展开，且点击的不是选择器内的元素，则关闭
   if (isExpanded.value && selectorRef.value && !selectorRef.value.contains(e.target)) {
-    // 确保不是点击悬浮球本身（虽然应该已经被 stopPropagation 阻止了）
-    const floatingBall = selectorRef.value.querySelector('.size-selector__floating-ball')
-    if (floatingBall && floatingBall.contains(e.target)) {
-      return
-    }
     isExpanded.value = false
   }
 }
@@ -378,7 +220,7 @@ onMounted(() => {
   // 根据设备类型初始化展开状态
   isExpanded.value = isDesktop.value
 
-  // 初始化展开状态和悬浮球位置（仅移动端）
+  // 初始化展开状态（仅移动端）
   nextTick(() => {
     // PC端下拉框不需要初始化动画
     if (isDesktop.value) {
@@ -406,49 +248,20 @@ onMounted(() => {
       }
     }
 
-    // 初始化悬浮球位置（如果没有保存的位置，使用右侧中间）
-    if (selectorRef.value && !isDesktop.value) {
-      // 如果没有保存的位置，计算右侧中间位置
-      if (!savedPosition) {
-        const ballSize = 56
-        const margin = 20
-        // 确保使用正确的窗口尺寸
-        const windowWidth = window.innerWidth || document.documentElement.clientWidth || window.screen?.width || 1024
-        const windowHeight = window.innerHeight || document.documentElement.clientHeight || window.screen?.height || 768
-        // 右侧中间：x = 窗口宽度 - 球大小 - 边距，y = (窗口高度 - 球大小) / 2
-        const initX = Math.max(0, windowWidth - ballSize - margin)
-        const initY = Math.max(margin, (windowHeight - ballSize) / 2)
-        position.value = { x: initX, y: initY }
-        // 保存初始位置
-        savePosition()
-      }
-
-      // 设置悬浮球容器的位置和显示
-      gsap.set(selectorRef.value, {
-        x: position.value.x,
-        y: position.value.y,
-        display: 'flex', // 确保显示
-      })
-
-      // 确保悬浮球默认显示（如果未展开）
-      if (!isExpanded.value) {
-        const floatingBall = selectorRef.value.querySelector('.size-selector__floating-ball')
-        if (floatingBall) {
-          gsap.set(floatingBall, {
-            display: 'flex',
-            scale: 1,
-            opacity: 1,
-          })
-        }
+    // 确保悬浮球默认显示（如果未展开）
+    if (selectorRef.value && !isExpanded.value) {
+      const floatingBall = selectorRef.value.querySelector('.size-selector__floating-ball')
+      if (floatingBall) {
+        gsap.set(floatingBall, {
+          display: 'flex',
+          scale: 1,
+          opacity: 1,
+        })
       }
     }
   })
 
-  // 添加全局拖拽事件监听
-  document.addEventListener('mousemove', handleDragMove)
-  document.addEventListener('mouseup', handleDragEnd)
-  document.addEventListener('touchmove', handleDragMove, { passive: false })
-  document.addEventListener('touchend', handleDragEnd)
+  // 添加全局点击事件监听（用于点击外部关闭）
   document.addEventListener('click', handleClickOutside)
 })
 
@@ -460,14 +273,7 @@ onUnmounted(() => {
   if (expandAnimation) {
     expandAnimation.kill()
   }
-  if (positionAnimation) {
-    positionAnimation.kill()
-  }
   // 移除全局事件监听
-  document.removeEventListener('mousemove', handleDragMove)
-  document.removeEventListener('mouseup', handleDragEnd)
-  document.removeEventListener('touchmove', handleDragMove)
-  document.removeEventListener('touchend', handleDragEnd)
   document.removeEventListener('click', handleClickOutside)
 })
 </script>
@@ -532,69 +338,67 @@ onUnmounted(() => {
       </div>
     </div>
 
-    <!-- 移动端：悬浮球形式，可拖拽 -->
-    <div
-      v-else
-      ref="selectorRef"
-      class="phone-frame__size-selector phone-frame__size-selector--floating"
-      :class="{ 'is-expanded': isExpanded, 'is-dragging': isDragging }"
-    >
-      <!-- 悬浮球（默认显示） -->
-      <button
-        class="size-selector__floating-ball"
-        @mousedown.stop="handleDragStart"
-        @mouseup.stop="handleFloatingBallClick"
-        @touchstart.stop="handleDragStart"
-        @touchend.stop="handleFloatingBallClick"
-      >
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <rect x="3" y="3" width="18" height="18" rx="2" />
-        </svg>
-      </button>
-
-      <!-- 展开的选项列表 -->
+    <!-- 移动端：悬浮球形式，使用 Teleport 移到 body 避免受祖先元素 transform 影响 -->
+    <Teleport v-if="!isDesktop" to="body">
       <div
-        ref="optionsRef"
-        class="size-selector__options"
+        ref="selectorRef"
+        class="phone-frame__size-selector phone-frame__size-selector--floating"
+        :class="{ 'is-expanded': isExpanded }"
       >
-        <!-- 移动端：选项列表头部 -->
-        <div v-if="!isDesktop" class="size-selector__header">
-          <span class="header__label">设备尺寸</span>
+        <!-- 悬浮球（固定在右上角，点击展开选项） -->
+        <button
+          class="size-selector__floating-ball"
+          @click.stop="handleFloatingBallClick"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="18" height="18" rx="2" />
+          </svg>
+        </button>
+
+        <!-- 展开的选项列表 -->
+        <div
+          ref="optionsRef"
+          class="size-selector__options"
+        >
+          <!-- 移动端：选项列表头部 -->
+          <div class="size-selector__header">
+            <span class="header__label">设备尺寸</span>
+            <button
+              class="header__close"
+              @click.stop="isExpanded = false"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M18 6L6 18M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
           <button
-            class="header__close"
-            @click.stop="isExpanded = false"
+            class="size-option"
+            :class="{ 'is-active': deviceSize === DEVICE_SIZES.STANDARD }"
+            @click.stop="handleSizeChange(DEVICE_SIZES.STANDARD)"
           >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M18 6L6 18M6 6l12 12" />
-            </svg>
+            <span class="size-option__label">标准版</span>
+            <span class="size-option__dimensions">375×812</span>
+          </button>
+          <button
+            class="size-option"
+            :class="{ 'is-active': deviceSize === DEVICE_SIZES.PRO }"
+            @click.stop="handleSizeChange(DEVICE_SIZES.PRO)"
+          >
+            <span class="size-option__label">Pro</span>
+            <span class="size-option__dimensions">393×852</span>
+          </button>
+          <button
+            class="size-option"
+            :class="{ 'is-active': deviceSize === DEVICE_SIZES.PRO_MAX }"
+            @click.stop="handleSizeChange(DEVICE_SIZES.PRO_MAX)"
+          >
+            <span class="size-option__label">Pro Max</span>
+            <span class="size-option__dimensions">430×932</span>
           </button>
         </div>
-        <button
-          class="size-option"
-          :class="{ 'is-active': deviceSize === DEVICE_SIZES.STANDARD }"
-          @click.stop="handleSizeChange(DEVICE_SIZES.STANDARD)"
-        >
-          <span class="size-option__label">标准版</span>
-          <span class="size-option__dimensions">375×812</span>
-        </button>
-        <button
-          class="size-option"
-          :class="{ 'is-active': deviceSize === DEVICE_SIZES.PRO }"
-          @click.stop="handleSizeChange(DEVICE_SIZES.PRO)"
-        >
-          <span class="size-option__label">Pro</span>
-          <span class="size-option__dimensions">393×852</span>
-        </button>
-        <button
-          class="size-option"
-          :class="{ 'is-active': deviceSize === DEVICE_SIZES.PRO_MAX }"
-          @click.stop="handleSizeChange(DEVICE_SIZES.PRO_MAX)"
-        >
-          <span class="size-option__label">Pro Max</span>
-          <span class="size-option__dimensions">430×932</span>
-        </button>
       </div>
-    </div>
+    </Teleport>
 
     <!-- 手机外框 -->
     <div
@@ -638,7 +442,7 @@ onUnmounted(() => {
   padding: $spacing-xl;
   // 使用更柔和的背景色，避免与图片对比太强烈
   background: #f5f5f5; // 浅灰色背景
-  border-radius: $radius-2xl;
+  // border-radius: $radius-2xl;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
   // 优化过渡，避免闪烁
   transition: background-color 0.2s ease;
@@ -724,31 +528,23 @@ onUnmounted(() => {
   }
 }
 
-// 移动端：悬浮球形式，可拖拽
+// 移动端：悬浮球形式，固定在右上角
 .phone-frame__size-selector--floating {
   position: fixed;
+  top: 20px;
+  right: 20px;
   display: flex !important; // 确保显示
   flex-direction: column;
   align-items: flex-end;
   pointer-events: none; // 默认不阻挡，展开后恢复
-  will-change: transform;
   z-index: 10000; // 确保在最上层
 
   &.is-expanded {
     pointer-events: auto;
   }
-
-  &.is-dragging {
-    cursor: grabbing;
-    user-select: none;
-
-    .size-selector__floating-ball {
-      cursor: grabbing;
-    }
-  }
 }
 
-// 悬浮球（默认显示）
+// 悬浮球（固定在右上角）
 .size-selector__floating-ball {
   width: 56px;
   height: 56px;
@@ -759,14 +555,13 @@ onUnmounted(() => {
   border: none;
   border-radius: $radius-full;
   color: #ffffff;
-  cursor: grab;
+  cursor: pointer;
   pointer-events: auto;
   box-shadow:
     0 4px 20px rgba(0, 0, 0, 0.25),
     0 2px 10px rgba(0, 0, 0, 0.15),
     0 0 0 2px rgba(255, 255, 255, 0.1);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  will-change: transform, box-shadow, opacity;
 
   svg {
     width: 24px;
@@ -783,7 +578,6 @@ onUnmounted(() => {
 
   &:active {
     transform: scale(0.95);
-    cursor: grabbing;
   }
 }
 
