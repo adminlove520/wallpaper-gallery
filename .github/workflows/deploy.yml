@@ -145,12 +145,13 @@ jobs:
       - name: Purge Cloudflare cache
         if: success()
         run: |
-          echo "🧹 Purging Cloudflare cache for version.json..."
+          echo "🧹 Purging Cloudflare cache..."
 
+          # 清除关键文件缓存（index.html 和 version.json）
           RESPONSE=$(curl -s -X POST "https://api.cloudflare.com/client/v4/zones/${{ secrets.CLOUDFLARE_ZONE_ID }}/purge_cache" \
             -H "Authorization: Bearer ${{ secrets.CLOUDFLARE_API_TOKEN }}" \
             -H "Content-Type: application/json" \
-            --data '{"files":["https://wallpaper.061129.xyz/version.json"]}')
+            --data '{"files":["https://wallpaper.061129.xyz/","https://wallpaper.061129.xyz/index.html","https://wallpaper.061129.xyz/version.json"]}')
 
           # 检查响应
           SUCCESS=$(echo "$RESPONSE" | jq -r '.success')
