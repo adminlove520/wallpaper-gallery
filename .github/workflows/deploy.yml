@@ -64,7 +64,7 @@ jobs:
         with:
           repository: IT-NuanxinPro/nuanXinProPic
           path: nuanXinProPic
-          fetch-depth: 0  # 获取完整历史，用于恢复时间戳
+          fetch-depth: 1  # 只需最新版本，时间戳从备份文件恢复
 
       - name: Restore file timestamps from backup
         run: |
@@ -115,8 +115,7 @@ jobs:
       - name: Install ImageMagick (for image dimensions)
         run: sudo apt-get update && sudo apt-get install -y imagemagick
 
-      - name: Generate wallpaper data
-        run: node scripts/generate-data.js
+      # generate-data.js 已包含在 pnpm build 中，无需单独执行
 
       - name: Build
         run: pnpm build
