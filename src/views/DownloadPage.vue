@@ -36,21 +36,14 @@ async function handleDownload() {
 
   downloading.value = true
   try {
-    // 移动端直接使用 window.location.href，不通过 blob
-    // 因为移动浏览器不支持通过 JavaScript 触发的 download 属性
     if (isMobileOrTabletDevice()) {
-      // 移动端：直接打开下载链接
-      // 使用 location.href 而不是 window.open，确保在 PWA 中也能正常工作
       window.location.href = appInfo.value.downloadUrl
-
-      // 延迟重置状态，给浏览器时间处理下载
       setTimeout(() => {
         downloading.value = false
       }, 1000)
       return
     }
 
-    // 桌面端：使用 blob 方式下载（支持自定义文件名）
     const response = await fetch(appInfo.value.downloadUrl)
     if (!response.ok)
       throw new Error('下载失败')
@@ -68,7 +61,6 @@ async function handleDownload() {
   }
   catch (error) {
     console.error('下载失败:', error)
-    // 降级：直接跳转下载
     window.location.href = appInfo.value.downloadUrl
     downloading.value = false
   }
@@ -121,15 +113,16 @@ onMounted(() => {
         </button>
       </div>
 
-      <!-- 版本信息 -->
+      <!-- 版本信息和下载 -->
       <div v-else class="version-info">
-        <div class="version-badge">
-          <span class="version-label">最新版本</span>
-          <span class="version-number">v{{ appInfo.version }}</span>
-        </div>
-
-        <div v-if="appInfo.releaseDate" class="release-date">
-          发布于 {{ formatDate(appInfo.releaseDate) }}
+        <div class="version-row">
+          <div class="version-badge">
+            <span class="version-label">最新版本</span>
+            <span class="version-number">v{{ appInfo.version }}</span>
+          </div>
+          <span v-if="appInfo.releaseDate" class="release-date">
+            {{ formatDate(appInfo.releaseDate) }}
+          </span>
         </div>
 
         <!-- 下载按钮 -->
@@ -149,15 +142,13 @@ onMounted(() => {
         </button>
 
         <!-- 更新日志 -->
-        <div v-if="appInfo.changelog" class="changelog">
-          <h3>更新内容</h3>
-          <p>{{ appInfo.changelog }}</p>
-        </div>
+        <p v-if="appInfo.changelog" class="changelog">
+          {{ appInfo.changelog }}
+        </p>
       </div>
 
       <!-- 功能特性 -->
       <div class="features">
-        <h3>功能特性</h3>
         <ul>
           <li>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -169,7 +160,7 @@ onMounted(() => {
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <polyline points="20 6 9 17 4 12" />
             </svg>
-            <span>支持电脑、手机、头像</span>
+            <span>电脑/手机/头像</span>
           </li>
           <li>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -188,12 +179,10 @@ onMounted(() => {
 
       <!-- 安装说明 -->
       <div class="install-tips">
-        <h3>安装说明</h3>
         <ol>
-          <li>点击下载按钮获取 APK 文件</li>
-          <li>打开下载的文件进行安装</li>
-          <li>如提示风险，请选择「仍要安装」</li>
-          <li>首次使用需授予存储权限</li>
+          <li>点击下载按钮获取 APK</li>
+          <li>打开文件进行安装</li>
+          <li>如提示风险，选择「仍要安装」</li>
         </ol>
       </div>
     </div>
@@ -202,45 +191,35 @@ onMounted(() => {
 
 <style lang="scss" scoped>
 .download-page {
-  height: 100vh;
-  height: 100dvh; // 动态视口高度，适配移动端
+  position: fixed;
+  inset: 0;
   overflow: hidden;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  padding: 16px;
+  padding: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .download-container {
-  max-width: 380px;
+  max-width: 340px;
   width: 100%;
-  max-height: calc(100vh - 32px);
-  max-height: calc(100dvh - 32px);
   background: #ffffff;
   border-radius: 20px;
-  padding: 24px 20px;
+  padding: 20px 16px;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-  overflow-y: auto;
-
-  // 隐藏滚动条但保留滚动功能
-  &::-webkit-scrollbar {
-    display: none;
-  }
-  -ms-overflow-style: none;
-  scrollbar-width: none;
 }
 
 .app-header {
   text-align: center;
-  margin-bottom: 16px;
+  margin-bottom: 12px;
 }
 
 .app-icon {
-  width: 72px;
-  height: 72px;
-  margin: 0 auto 10px;
-  border-radius: 18px;
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 8px;
+  border-radius: 16px;
   overflow: hidden;
   box-shadow: 0 6px 18px rgba(99, 102, 241, 0.3);
 
@@ -252,38 +231,38 @@ onMounted(() => {
 }
 
 .app-name {
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 700;
   color: #1a1a2e;
-  margin-bottom: 4px;
+  margin-bottom: 2px;
 }
 
 .app-desc {
-  font-size: 13px;
+  font-size: 12px;
   color: #6c757d;
 }
 
 .loading-state,
 .error-state {
   text-align: center;
-  padding: 24px 0;
+  padding: 16px 0;
   color: #6c757d;
 }
 
 .spinner,
 .btn-spinner {
-  width: 28px;
-  height: 28px;
+  width: 24px;
+  height: 24px;
   border: 3px solid #e9ecef;
   border-top-color: #6366f1;
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
-  margin: 0 auto 10px;
+  margin: 0 auto 8px;
 }
 
 .btn-spinner {
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
   border-width: 2px;
   border-color: rgba(255, 255, 255, 0.3);
   border-top-color: #ffffff;
@@ -297,13 +276,13 @@ onMounted(() => {
 }
 
 .retry-btn {
-  margin-top: 12px;
-  padding: 8px 20px;
+  margin-top: 8px;
+  padding: 6px 16px;
   background: #6366f1;
   color: #ffffff;
   border: none;
   border-radius: 8px;
-  font-size: 13px;
+  font-size: 12px;
   cursor: pointer;
 
   &:hover {
@@ -312,57 +291,61 @@ onMounted(() => {
 }
 
 .version-info {
-  text-align: center;
-  margin-bottom: 16px;
+  margin-bottom: 12px;
+}
+
+.version-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
 }
 
 .version-badge {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   background: #f0f1ff;
-  padding: 6px 12px;
-  border-radius: 16px;
-  margin-bottom: 8px;
+  padding: 4px 10px;
+  border-radius: 12px;
 }
 
 .version-label {
-  font-size: 11px;
+  font-size: 10px;
   color: #6c757d;
 }
 
 .version-number {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
   color: #6366f1;
 }
 
 .release-date {
-  font-size: 12px;
+  font-size: 11px;
   color: #adb5bd;
-  margin-bottom: 16px;
 }
 
 .download-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 6px;
   width: 100%;
-  padding: 14px 20px;
+  padding: 12px 16px;
   background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
   color: #ffffff;
   border: none;
-  border-radius: 12px;
-  font-size: 15px;
+  border-radius: 10px;
+  font-size: 14px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
   box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4);
 
   .icon {
-    width: 20px;
-    height: 20px;
+    width: 18px;
+    height: 18px;
   }
 
   &:hover:not(:disabled) {
@@ -385,94 +368,78 @@ onMounted(() => {
 }
 
 .changelog {
-  margin-top: 16px;
-  padding: 12px;
+  margin-top: 10px;
+  padding: 8px 10px;
   background: #f8f9fa;
-  border-radius: 10px;
-  text-align: left;
-
-  h3 {
-    font-size: 13px;
-    font-weight: 600;
-    color: #1a1a2e;
-    margin-bottom: 6px;
-  }
-
-  p {
-    font-size: 12px;
-    color: #6c757d;
-    line-height: 1.5;
-  }
+  border-radius: 8px;
+  font-size: 11px;
+  color: #6c757d;
+  line-height: 1.4;
 }
 
-.features,
-.install-tips {
-  margin-top: 16px;
-  padding-top: 14px;
+.features {
+  padding-top: 12px;
   border-top: 1px solid #e9ecef;
 
-  h3 {
-    font-size: 13px;
-    font-weight: 600;
-    color: #1a1a2e;
-    margin-bottom: 10px;
-  }
-}
-
-.features ul {
-  list-style: none;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-
-  li {
-    display: flex;
-    align-items: center;
+  ul {
+    list-style: none;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
     gap: 6px;
-    font-size: 12px;
-    color: #495057;
 
-    svg {
-      width: 14px;
-      height: 14px;
-      color: #10b981;
-      flex-shrink: 0;
-    }
-  }
-}
-
-.install-tips ol {
-  list-style: none;
-  counter-reset: step;
-
-  li {
-    position: relative;
-    padding-left: 28px;
-    margin-bottom: 8px;
-    font-size: 12px;
-    color: #495057;
-    line-height: 1.4;
-
-    &::before {
-      content: counter(step);
-      counter-increment: step;
-      position: absolute;
-      left: 0;
-      top: 0;
-      width: 20px;
-      height: 20px;
-      background: #f0f1ff;
-      color: #6366f1;
-      border-radius: 50%;
-      font-size: 11px;
-      font-weight: 600;
+    li {
       display: flex;
       align-items: center;
-      justify-content: center;
-    }
+      gap: 4px;
+      font-size: 11px;
+      color: #495057;
 
-    &:last-child {
-      margin-bottom: 0;
+      svg {
+        width: 12px;
+        height: 12px;
+        color: #10b981;
+        flex-shrink: 0;
+      }
+    }
+  }
+}
+
+.install-tips {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #e9ecef;
+
+  ol {
+    list-style: none;
+    counter-reset: step;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+
+    li {
+      position: relative;
+      padding-left: 24px;
+      font-size: 11px;
+      color: #495057;
+      line-height: 1.3;
+
+      &::before {
+        content: counter(step);
+        counter-increment: step;
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 16px;
+        height: 16px;
+        background: #f0f1ff;
+        color: #6366f1;
+        border-radius: 50%;
+        font-size: 10px;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
     }
   }
 }

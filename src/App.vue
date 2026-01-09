@@ -23,6 +23,9 @@ const route = useRoute()
 // 根据路由 meta 动态获取骨架屏宽高比
 const skeletonAspectType = computed(() => route.meta?.aspectType || 'landscape')
 
+// 是否隐藏导航栏（用于下载页等独立页面）
+const hideHeader = computed(() => route.meta?.hideHeader === true)
+
 // Initialize
 onMounted(() => {
   initTheme()
@@ -31,10 +34,10 @@ onMounted(() => {
 
 <template>
   <ElConfigProvider :locale="zhCn">
-    <div class="app">
-      <AppHeader />
+    <div class="app" :class="{ 'no-header': hideHeader }">
+      <AppHeader v-if="!hideHeader" />
 
-      <main class="main-content">
+      <main class="main-content" :class="{ 'no-padding': hideHeader }">
         <RouterView v-slot="{ Component }">
           <Suspense v-if="Component">
             <template #default>
@@ -54,7 +57,7 @@ onMounted(() => {
       <!-- <AppFooter /> -->
 
       <!-- 版本更新提示 -->
-      <UpdateNotification />
+      <UpdateNotification v-if="!hideHeader" />
     </div>
   </ElConfigProvider>
 </template>
@@ -70,10 +73,19 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
+
+  &.no-header {
+    min-height: 100vh;
+    min-height: 100dvh;
+  }
 }
 
 .main-content {
   flex: 1;
   padding-top: $header-height;
+
+  &.no-padding {
+    padding-top: 0;
+  }
 }
 </style>
